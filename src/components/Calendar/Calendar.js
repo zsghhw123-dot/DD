@@ -24,7 +24,7 @@ const Calendar = () => {
     
     const days = [];
     
-    // 添加上个月的剩余天数
+    // 添加上个月的剩余天数以填充第一行
     const prevMonthDays = getDaysInMonth(year, month - 1);
     for (let i = 0; i < firstDayOfMonth; i++) {
       days.push({
@@ -44,14 +44,19 @@ const Calendar = () => {
       });
     }
     
-    // 添加下个月的开始天数
-    const remainingDays = 42 - days.length; // 6行7列 = 42
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({
-        day: i,
-        isCurrentMonth: false,
-        date: new Date(year, month + 1, i)
-      });
+    // 计算需要添加的下个月天数，确保总数是7的倍数
+    const totalDaysShown = days.length;
+    const remainingDays = 7 - (totalDaysShown % 7);
+    
+    // 只有当需要填充最后一行时才添加下个月的日期
+    if (remainingDays < 7) {
+      for (let i = 1; i <= remainingDays; i++) {
+        days.push({
+          day: i,
+          isCurrentMonth: false,
+          date: new Date(year, month + 1, i)
+        });
+      }
     }
     
     return days;
@@ -226,7 +231,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   otherMonthText: {
-    color: '#ccc',
+    color: '#cccccc',
   },
   selectedDay: {
     backgroundColor: '#a8e6cf',
