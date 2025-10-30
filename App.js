@@ -5,6 +5,166 @@ import Calendar from './src/components/Calendar/Calendar';
 import RecordItem from './src/components/RecordItem/RecordItem';
 
 export default function App() {
+  // 当前显示的年月状态
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 月份从1开始
+  const [accessToken, setAccessToken] = useState(null);
+  const [activityData, setActivityData] = useState({});
+  
+  // 数据缓存：存储多个月份的数据，格式：{ "2025-10": {...}, "2025-11": {...} }
+  const [dataCache, setDataCache] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
+
+  // 提取表情符号的函数
+  const extractEmojis = (text) => {
+    const emojiRegex = /[\u203C-\u2049\u20E3\u2191-\u21FF\u2302-\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2-\u25EC\u2600-\u27BF\u2C60-\u2C7F\u2D30-\u2D7F\uA960-\uAEBFL\uD83C-\uDBFF\uDC00-\uDFFF]+/g;
+    return text.match(emojiRegex) || [];
+  };
+
+  // 生成月份键的函数
+  const getMonthKey = (year, month) => {
+    return `${year}-${month.toString().padStart(2, '0')}`;
+  };
+
+  // 计算前后n个月的年月列表
+  const getMonthRange = (centerYear, centerMonth, n = 3) => {
+    const months = [];
+    
+    for (let i = -n; i <= n; i++) {
+      const date = new Date(centerYear, centerMonth - 1 + i, 1);
+      months.push({
+        year: date.getFullYear(),
+        month: date.getMonth() + 1
+      });
+    }
+    
+    return months;
+  };
+
+  // 将飞书API数据转换为activityData格式
+  const convertToActivityData = (records) => {
+    const newActivityData = {};
+    
+    if (!records || !Array.isArray(records)) {
+      return newActivityData;
+    }
+
+    records.forEach(record => {
+      // 获取日期（几号）
+      const day = record.fields.日?.value?.[0];
+      // 获取类别
+      const category = record.fields.类别;
+      
+      if (day && category) {
+        // 提取类别中的表情符号
+        const emojis = extractEmojis(category);
+        
+        if (emojis.length > 0) {
+          // 如果该日期还没有记录，初始化为空数组
+          if (!newActivityData[day]) {
+            newActivityData[day] = [];
+          }
+          
+          // 将表情符号添加到对应日期，避免重复
+          emojis.forEach(emoji => {
+            if (!newActivityData[day].includes(emoji)) {
+              newActivityData[day].push(emoji);
+            }
+          });
+        }
+      }
+    });
+
+    return newActivityData;
+  };
+
+  // 获取单个月份的Bitable记录数据
+  const getBitableRecords = async (token, year, month) => {
+    try {
+      const response = await fetch('https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/search', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          filter: {
+            conjunction: "and",
+            conditions: [
+              {
+                field_name: "年",
+                operator: "is",
+                value: [year.toString()]
+              },
+              {
+                field_name: "月",
+                operator: "is", 
+                value: [month.toString()]
+              }
+            ]
+          }
+        })
+      });
+
+      if (response.ok) {
+        const recordsData = await response.json();
+        console.log(`${year}年${month}月 Bitable数据:`, recordsData);
+        
+        if (recordsData.data && recordsData.data.items) {
+          const convertedData = convertToActivityData(recordsData.data.items);
+          return convertedData;
+        }
+      } else {
+        console.error(`获取${year}年${month}月数据失败:`, response.status);
+      }
+    } catch (error) {
+      console.error(`获取${year}年${month}月数据时出错:`, error);
+    }
+    return {};
+  };
+
+  // 批量获取多个月份的数据
+  const fetchMultipleMonths = async (token, months) => {
+    setIsLoading(true);
+    const newCache = { ...dataCache };
+    
+    try {
+      // 并行请求所有月份的数据
+      const promises = months.map(async ({ year, month }) => {
+        const monthKey = getMonthKey(year, month);
+        
+        // 如果缓存中已有数据，跳过请求
+        if (newCache[monthKey]) {
+          return { monthKey, data: newCache[monthKey] };
+        }
+        
+        const data = await getBitableRecords(token, year, month);
+        return { monthKey, data };
+      });
+      
+      const results = await Promise.all(promises);
+      
+      // 更新缓存
+      results.forEach(({ monthKey, data }) => {
+        newCache[monthKey] = data;
+      });
+      
+      setDataCache(newCache);
+      
+      // 更新当前显示的activityData
+      const currentMonthKey = getMonthKey(currentYear, currentMonth);
+      if (newCache[currentMonthKey]) {
+        setActivityData(newCache[currentMonthKey]);
+      }
+      
+    } catch (error) {
+      console.error('批量获取数据时出错:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // 获取飞书tenant_access_token
   const getTenantAccessToken = async () => {
     try {
@@ -23,9 +183,15 @@ export default function App() {
 
       const data = await response.json();
       console.log('飞书API响应:', data);
-      
+
       if (data.tenant_access_token) {
         console.log('tenant_access_token:', data.tenant_access_token);
+        setAccessToken(data.tenant_access_token);
+
+        // 获取当前月及前后3个月的数据（共7个月）
+        const months = getMonthRange(currentYear, currentMonth, 3);
+        console.log('准备获取的月份:', months);
+        await fetchMultipleMonths(data.tenant_access_token, months);
       } else {
         console.log('获取tenant_access_token失败:', data);
       }
@@ -40,6 +206,39 @@ export default function App() {
     getTenantAccessToken();
   }, []);
 
+  // 处理日历年月变化的回调函数
+  const handleDateChange = (year, month) => {
+    setCurrentYear(year);
+    setCurrentMonth(month);
+    
+    // 立即更新当前显示的数据
+    const currentMonthKey = getMonthKey(year, month);
+    if (dataCache[currentMonthKey]) {
+      setActivityData(dataCache[currentMonthKey]);
+    } else {
+      setActivityData({});
+    }
+    
+    // 检查是否需要预加载新的月份数据
+    if (accessToken) {
+      checkAndPreloadData(year, month);
+    }
+  };
+
+  // 检查缓存并预加载数据
+  const checkAndPreloadData = async (year, month) => {
+    const requiredMonths = getMonthRange(year, month, 3);
+    const missingMonths = requiredMonths.filter(({ year: y, month: m }) => {
+      const monthKey = getMonthKey(y, m);
+      return !dataCache[monthKey];
+    });
+    
+    if (missingMonths.length > 0) {
+      console.log('需要预加载的月份:', missingMonths);
+      await fetchMultipleMonths(accessToken, missingMonths);
+    }
+  };
+
   // 模拟记录数据
   const recordData = [
     { id: 1, icon: '🏃', title: '运动', description: '健身房一次性卡', amount: '18.5' },
@@ -52,8 +251,8 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="auto" />
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <Calendar />
-        
+        <Calendar onDateChange={handleDateChange} activityData={activityData} />
+
         <View style={styles.recordsContainer}>
           <Text style={styles.recordsTitle}>30日活动</Text>
           {recordData.map(record => (

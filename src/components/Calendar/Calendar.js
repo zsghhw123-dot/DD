@@ -1,18 +1,16 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
 
-const Calendar = () => {
+const Calendar = ({ onDateChange, activityData = {} }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  
-  // 活动数据 - 包含日期和对应的活动图标
-  const activityData = {
-    10: ['💪', '🍚'], // 10号有健身和饮食记录
-    21: ['🎤'],       // 21号有语音记录
-    15: ['💪'],       // 15号有健身记录
-    8: ['🍚', '📝'],  // 8号有饮食和笔记记录
-    25: ['💪', '🎤', '🍚'], // 25号有多种活动
-  };
+
+  // 初始化时通知父组件当前年月
+  useEffect(() => {
+    if (onDateChange) {
+      onDateChange(currentDate.getFullYear(), currentDate.getMonth() + 1);
+    }
+  }, []);
   
   // 获取当前月份的天数
   const getDaysInMonth = (year, month) => {
@@ -76,13 +74,54 @@ const Calendar = () => {
   
   // 切换到上个月
   const goToPreviousMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    setCurrentDate(newDate);
+    
+    // 通知父组件年月变化
+    if (onDateChange) {
+      onDateChange(newDate.getFullYear(), newDate.getMonth() + 1);
+    }
   };
-  
+
   // 切换到下个月
   const goToNextMonth = () => {
-    setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+    const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    setCurrentDate(newDate);
+    
+    // 通知父组件年月变化
+    if (onDateChange) {
+      onDateChange(newDate.getFullYear(), newDate.getMonth() + 1);
+    }
   };
+
+  // 创建手势响应器
+  const panResponder = PanResponder.create({
+    onMoveShouldSetPanResponder: (evt, gestureState) => {
+      // 当水平滑动距离大于垂直滑动距离且超过阈值时激活手势
+      return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && Math.abs(gestureState.dx) > 20;
+    },
+    onPanResponderGrant: () => {
+      // 手势开始时的处理
+    },
+    onPanResponderMove: (evt, gestureState) => {
+      // 手势移动时的处理（可以在这里添加视觉反馈）
+    },
+    onPanResponderRelease: (evt, gestureState) => {
+      // 手势结束时的处理
+      const { dx } = gestureState;
+      const threshold = 50; // 滑动阈值
+      
+      if (Math.abs(dx) > threshold) {
+        if (dx > 0) {
+          // 向右滑动 - 切换到上个月
+          goToPreviousMonth();
+        } else {
+          // 向左滑动 - 切换到下个月
+          goToNextMonth();
+        }
+      }
+    },
+  });
   
   // 选择日期
   const selectDate = (date) => {
@@ -144,7 +183,7 @@ const Calendar = () => {
     }
 
     return (
-      <View style={styles.daysContainer}>
+      <View style={styles.daysContainer} {...panResponder.panHandlers}>
         {rows.map((row, rowIndex) => (
           <View style={styles.weekRow} key={rowIndex}>
             {row.map((item, index) => {
