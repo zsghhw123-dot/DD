@@ -5,6 +5,15 @@ const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   
+  // 活动数据 - 包含日期和对应的活动图标
+  const activityData = {
+    10: ['💪', '🍚'], // 10号有健身和饮食记录
+    21: ['🎤'],       // 21号有语音记录
+    15: ['💪'],       // 15号有健身记录
+    8: ['🍚', '📝'],  // 8号有饮食和笔记记录
+    25: ['💪', '🎤', '🍚'], // 25号有多种活动
+  };
+  
   // 获取当前月份的天数
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
@@ -37,11 +46,13 @@ const Calendar = () => {
     
     // 添加当前月的天数
     for (let i = 1; i <= daysInMonth; i++) {
+      const hasActivity = activityData[i] && activityData[i].length > 0;
       days.push({
         day: i,
         isCurrentMonth: true,
         date: new Date(year, month, i),
-        hasRecord: [1, 9, 13, 18, 21, 23].includes(i) // 模拟有记录的日期
+        hasActivity: hasActivity,
+        activities: activityData[i] || []
       });
     }
     
@@ -136,34 +147,59 @@ const Calendar = () => {
       <View style={styles.daysContainer}>
         {rows.map((row, rowIndex) => (
           <View style={styles.weekRow} key={rowIndex}>
-            {row.map((item, index) => (
-              <TouchableOpacity
-                key={`${rowIndex}-${index}`}
-                style={styles.daySlot}
-                onPress={() => item.isCurrentMonth && selectDate(item.date)}
-                activeOpacity={item.isCurrentMonth ? 0.7 : 1}
-              >
-                <View
-                  style={[
-                    styles.dayContainer,
-                    item.isCurrentMonth ? styles.currentMonth : styles.otherMonth,
-                    isSelected(item.date) && styles.selectedDay,
-                    isToday(item.date) && styles.today
-                  ]}
+            {row.map((item, index) => {
+              // 确定背景样式
+              let dayContainerStyle = [styles.dayContainer];
+              
+              if (!item.isCurrentMonth) {
+                // 上个月的日期 - 保持原样（灰色背景）
+                dayContainerStyle.push(styles.otherMonth);
+              } else if (item.hasActivity) {
+                // 当月有活动的日期 - 绿色背景
+                dayContainerStyle.push(styles.currentMonthWithActivity);
+              } else {
+                // 当月无活动的日期 - 无背景
+                dayContainerStyle.push(styles.currentMonth);
+              }
+              
+              // 添加选中和今天的样式
+              if (isSelected(item.date)) dayContainerStyle.push(styles.selectedDay);
+              if (isToday(item.date)) dayContainerStyle.push(styles.today);
+
+              return (
+                <TouchableOpacity
+                  key={`${rowIndex}-${index}`}
+                  style={styles.daySlot}
+                  onPress={() => item.isCurrentMonth && selectDate(item.date)}
+                  activeOpacity={item.isCurrentMonth ? 0.7 : 1}
                 >
-                  <Text
-                    style={[
-                      styles.dayText,
-                      !item.isCurrentMonth && styles.otherMonthText,
-                      isSelected(item.date) && styles.selectedDayText
-                    ]}
-                  >
-                    {item.day}
-                  </Text>
-                  {item.hasRecord && <View style={styles.recordIndicator} />}
-                </View>
-              </TouchableOpacity>
-            ))}
+                  <View style={dayContainerStyle}>
+                    <Text
+                      style={[
+                        styles.dayText,
+                        !item.isCurrentMonth && styles.otherMonthText,
+                        isSelected(item.date) && styles.selectedDayText
+                      ]}
+                    >
+                      {item.day}
+                    </Text>
+
+                    {/* 显示活动图标 */}
+                  {item.isCurrentMonth && item.hasActivity && (
+                    <View style={styles.activityContainer}>
+                      {item.activities.slice(0, 3).map((icon, iconIndex) => (
+                        <Text key={iconIndex} style={styles.activityIcon}>
+                          {icon}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                  </View>
+                  
+                  
+                </TouchableOpacity>
+              );
+            })}
           </View>
         ))}
       </View>
@@ -183,8 +219,6 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f5fcf9',
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
   },
   header: {
     flexDirection: 'row',
@@ -194,7 +228,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     backgroundColor: '#fff',
     borderRadius: 20,
-    marginBottom: 10,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   headerButton: {
     fontSize: 18,
@@ -210,10 +248,14 @@ const styles = StyleSheet.create({
   weekDaysContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 10,
+    paddingVertical: 15,
     backgroundColor: '#e8f5f0',
     borderRadius: 10,
-    marginBottom: 5,
+    marginBottom: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
   },
   weekDay: {
     width: 40,
@@ -222,7 +264,16 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   daysContainer: {
-    paddingTop: 5,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingTop: 10,
+    paddingBottom: 10,
+    marginTop: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+
   },
   weekRow: {
     flexDirection: 'row',
@@ -240,16 +291,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     margin: 2,
     borderRadius: 20,
+    position: 'relative'
   },
   dayText: {
     fontSize: 14,
     color: '#333',
   },
   currentMonth: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: 'transparent', // 当月无活动时无背景
+  },
+  currentMonthWithActivity: {
+    backgroundColor: '#EEF7F2', // 当月有活动时的背景色
   },
   otherMonth: {
-    backgroundColor: 'transparent',
   },
   otherMonthText: {
     color: '#cccccc',
@@ -272,6 +326,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffcc5c',
     position: 'absolute',
     bottom: 4,
+  },
+  activityContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    position: 'absolute',
+    bottom: -5,
+    paddingVertical: 2,
+    paddingHorizontal: 4,
+    borderRadius:20,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  activityIcon: {
+    fontSize: 8,
+    marginHorizontal: 1,
   },
 });
 
