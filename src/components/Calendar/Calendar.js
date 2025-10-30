@@ -20,6 +20,7 @@ const Calendar = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     const daysInMonth = getDaysInMonth(year, month);
+    //获取1号是星期几，如果返回的是3那么1号则为星期三
     const firstDayOfMonth = getFirstDayOfMonth(year, month);
     
     const days = [];
@@ -125,31 +126,45 @@ const Calendar = () => {
   // 渲染日历天数
   const renderDays = () => {
     const days = generateCalendarDays();
-    
+    // 按7个为一行分组，保证每行7个日期
+    const rows = [];
+    for (let i = 0; i < days.length; i += 7) {
+      rows.push(days.slice(i, i + 7));
+    }
+
     return (
       <View style={styles.daysContainer}>
-        {days.map((item, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.dayContainer,
-              item.isCurrentMonth ? styles.currentMonth : styles.otherMonth,
-              isSelected(item.date) && styles.selectedDay,
-              isToday(item.date) && styles.today
-            ]}
-            onPress={() => item.isCurrentMonth && selectDate(item.date)}
-          >
-            <Text style={[
-              styles.dayText,
-              !item.isCurrentMonth && styles.otherMonthText,
-              isSelected(item.date) && styles.selectedDayText
-            ]}>
-              {item.day}
-            </Text>
-            {item.hasRecord && (
-              <View style={styles.recordIndicator} />
-            )}
-          </TouchableOpacity>
+        {rows.map((row, rowIndex) => (
+          <View style={styles.weekRow} key={rowIndex}>
+            {row.map((item, index) => (
+              <TouchableOpacity
+                key={`${rowIndex}-${index}`}
+                style={styles.daySlot}
+                onPress={() => item.isCurrentMonth && selectDate(item.date)}
+                activeOpacity={item.isCurrentMonth ? 0.7 : 1}
+              >
+                <View
+                  style={[
+                    styles.dayContainer,
+                    item.isCurrentMonth ? styles.currentMonth : styles.otherMonth,
+                    isSelected(item.date) && styles.selectedDay,
+                    isToday(item.date) && styles.today
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dayText,
+                      !item.isCurrentMonth && styles.otherMonthText,
+                      isSelected(item.date) && styles.selectedDayText
+                    ]}
+                  >
+                    {item.day}
+                  </Text>
+                  {item.hasRecord && <View style={styles.recordIndicator} />}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         ))}
       </View>
     );
@@ -201,16 +216,22 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   weekDay: {
-    width: 30,
+    width: 40,
     textAlign: 'center',
     fontSize: 14,
     color: '#666',
   },
   daysContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-around',
     paddingTop: 5,
+  },
+  weekRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 4,
+  },
+  daySlot: {
+    width: 40,
+    alignItems: 'center',
   },
   dayContainer: {
     width: 40,
