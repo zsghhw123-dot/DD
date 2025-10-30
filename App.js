@@ -113,6 +113,7 @@ export default function App() {
         
         if (recordsData.data && recordsData.data.items) {
           const convertedData = convertToActivityData(recordsData.data.items);
+          console.log(convertedData)
           return convertedData;
         }
       } else {
@@ -152,9 +153,9 @@ export default function App() {
       
       setDataCache(newCache);
       
-      // 更新当前显示的activityData
+      // 更新当前显示的activityData（只有当activityData没有值时才更新）
       const currentMonthKey = getMonthKey(currentYear, currentMonth);
-      if (newCache[currentMonthKey]) {
+      if (newCache[currentMonthKey] && Object.keys(activityData).length === 0) {
         setActivityData(newCache[currentMonthKey]);
       }
       
@@ -250,7 +251,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="auto" />
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.container}>
         <Calendar onDateChange={handleDateChange} activityData={activityData} />
 
         <View style={styles.recordsContainer}>
@@ -265,7 +266,7 @@ export default function App() {
             />
           ))}
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }
