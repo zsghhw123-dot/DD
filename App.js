@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
 import Calendar from './src/components/Calendar/Calendar';
 import RecordItem from './src/components/RecordItem/RecordItem';
 
@@ -17,6 +17,11 @@ export default function App({ navigation }) {
   
   // 选中日期的活动数据
   const [selectedDateData, setSelectedDateData] = useState([]);
+
+  // 语音按钮状态
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingAnimation] = useState(new Animated.Value(1));
+  const [pulseAnimation] = useState(new Animated.Value(1));
 
   // 提取表情符号的函数
   const extractEmojis = (text) => {
@@ -279,6 +284,53 @@ export default function App({ navigation }) {
     });
   };
 
+  // 语音按钮处理函数
+  const handleVoiceButtonPressIn = () => {
+    setIsRecording(true);
+    console.log('开始录音...');
+    
+    // 按钮缩放动画
+    Animated.spring(recordingAnimation, {
+      toValue: 0.9,
+      useNativeDriver: true,
+    }).start();
+    
+    // 脉冲动画
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimation, {
+          toValue: 1.2,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnimation, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  };
+
+  const handleVoiceButtonPressOut = () => {
+    setIsRecording(false);
+    console.log('结束录音...');
+    
+    // 恢复按钮大小
+    Animated.spring(recordingAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+    }).start();
+    
+    // 停止脉冲动画
+    pulseAnimation.stopAnimation();
+    Animated.timing(pulseAnimation, {
+      toValue: 1,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  };
+
   
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -310,6 +362,42 @@ export default function App({ navigation }) {
             ))}
           </ScrollView>
         </View>
+
+        {/* 语音按钮 */}
+        <View style={styles.voiceButtonContainer}>
+          <Animated.View 
+            style={[
+              styles.voicePulseCircle,
+              {
+                transform: [{ scale: pulseAnimation }],
+                opacity: isRecording ? 0.3 : 0,
+              }
+            ]}
+          />
+          <TouchableOpacity
+            style={[
+              styles.voiceButton,
+              { backgroundColor: isRecording ? '#ff4444' : '#4CAF50' }
+            ]}
+            onPressIn={handleVoiceButtonPressIn}
+            onPressOut={handleVoiceButtonPressOut}
+            activeOpacity={0.8}
+          >
+            <Animated.View
+              style={[
+                styles.voiceButtonInner,
+                { transform: [{ scale: recordingAnimation }] }
+              ]}
+            >
+              <Text style={styles.voiceIcon}>
+                {isRecording ? '⏹️' : '🎤'}
+              </Text>
+            </Animated.View>
+          </TouchableOpacity>
+          {isRecording && (
+            <Text style={styles.recordingText}>正在录音...</Text>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -337,5 +425,47 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginLeft: 10,
     marginBottom: 15,
+  },
+  // 语音按钮样式
+  voiceButtonContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voicePulseCircle: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#4CAF50',
+  },
+  voiceButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  voiceButtonInner: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceIcon: {
+    fontSize: 28,
+  },
+  recordingText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#ff4444',
+    fontWeight: '600',
   },
 });
