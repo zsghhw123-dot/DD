@@ -87,7 +87,8 @@ export default function App({ navigation }) {
               icon: activityEmoji,
               title: activityType,
               description: activityNote,
-              amount: activityAmount
+              amount: activityAmount,
+              fields: record.fields
             });
           }
         }

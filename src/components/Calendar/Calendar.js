@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
 
 const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-
+  const hasFirstFetchData = useRef(false);
   // 初始化时通知父组件当前年月
   useEffect(() => {
     if (onDateChange) {
@@ -12,11 +12,14 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     }
   }, []);
   
+
   // 等待activityData有值后自动选择当天日期
   useEffect(() => {
-    if (Object.keys(activityData).length > 0) {
+
+    if (Object.keys(activityData).length > 0 && !hasFirstFetchData.current) {
       const today = new Date();
       selectDate(today);
+      hasFirstFetchData.current = true;
     }
     console.log("触发了")
     return ()=>{console.log("清理函数执行了")}

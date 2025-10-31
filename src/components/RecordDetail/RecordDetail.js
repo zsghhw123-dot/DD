@@ -23,6 +23,14 @@ const RecordDetail = ({ route }) => {
         <Text style={styles.label}>Amount:</Text>
         <Text style={styles.value}>{record.amount}¥</Text>
       </View>
+      <View style={styles.recordInfo}>
+        <Text style={styles.label}>Fields:</Text>
+        <Text style={styles.value}>{new Date(record.fields.日期).toLocaleDateString()}</Text>
+      </View>
+      <View style={styles.recordInfo}>
+        <Text style={styles.label}>Fields:</Text>
+        <Text style={styles.value}>{JSON.stringify(record.fields)}</Text>
+      </View>
     </View>
   );
 };
