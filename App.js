@@ -122,7 +122,11 @@ export default function App() {
                 value: [month.toString()]
               }
             ]
-          }
+          },
+          sort:[{
+            field_name: "日期",
+            desc: true
+          }]
         })
       });
 
@@ -265,14 +269,7 @@ export default function App() {
     setSelectedDateData(dayActivities);
   };
 
-  // 模拟记录数据
-  const recordData = [
-    { id: 1, icon: '🏃', title: '运动', description: '健身房一次性卡', amount: '18.5' },
-    { id: 2, icon: '🌙', title: '餐饮', description: '美的饺子', amount: '9.0' },
-    { id: 3, icon: '📚', title: '学习', description: '学习ppt制作', amount: '0.0' },
-    { id: 4, icon: '🍷', title: '饮料', description: '美的蜜汁茶', amount: '2.5' },
-  ];
-
+  
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="auto" />

@@ -18,7 +18,13 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       const today = new Date();
       selectDate(today);
     }
+    console.log("触发了")
+    return ()=>{console.log("清理函数执行了")}
   }, [activityData]);
+
+  useEffect(() => {
+    console.log("我执行了")
+  }, []);
   
   // 获取当前月份的天数
   const getDaysInMonth = (year, month) => {
