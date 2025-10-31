@@ -287,15 +287,20 @@ export default function App() {
           <Text style={styles.recordsTitle}>
             {selectedDateData.length > 0 ? '选中日期活动' : '30日活动'}
           </Text>
-          {(selectedDateData.length > 0 ? selectedDateData : recordData).map(record => (
-            <RecordItem
-              key={record.id}
-              icon={record.icon}
-              title={record.title}
-              description={record.description}
-              amount={record.amount}
-            />
-          ))}
+          <ScrollView 
+            style={styles.recordsList}
+            showsVerticalScrollIndicator={false}
+          >
+            {selectedDateData.map(record => (
+              <RecordItem
+                key={record.id}
+                icon={record.icon}
+                title={record.title}
+                description={record.description}
+                amount={record.amount}
+              />
+            ))}
+          </ScrollView>
         </View>
       </View>
     </SafeAreaView>

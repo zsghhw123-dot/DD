@@ -12,6 +12,14 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     }
   }, []);
   
+  // 等待activityData有值后自动选择当天日期
+  useEffect(() => {
+    if (Object.keys(activityData).length > 0) {
+      const today = new Date();
+      selectDate(today);
+    }
+  }, [activityData]);
+  
   // 获取当前月份的天数
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
@@ -45,8 +53,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     // 添加当前月的天数
     for (let i = 1; i <= daysInMonth; i++) {
       // const hasActivity = activityData[i] && activityData[i].length > 0;
-      console.log(i)
-      console.log(activityData[i]?.activities && activityData[i].activities.length > 0)
+ 
       const hasActivity = activityData[i]?.activities && activityData[i].activities.length > 0
       days.push({
         day: i,
@@ -137,6 +144,8 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       onDateSelect(date, dayActivities);
     }
   };
+
+  
   
   // 判断日期是否是今天
   const isToday = (date) => {
