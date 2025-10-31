@@ -45,8 +45,8 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     // 添加当前月的天数
     for (let i = 1; i <= daysInMonth; i++) {
       // const hasActivity = activityData[i] && activityData[i].length > 0;
-      // console.log(i)
-      // console.log(activityData[i]?.activities && activityData[i].activities.length > 0)
+      console.log(i)
+      console.log(activityData[i]?.activities && activityData[i].activities.length > 0)
       const hasActivity = activityData[i]?.activities && activityData[i].activities.length > 0
       days.push({
         day: i,
