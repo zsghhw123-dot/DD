@@ -14,6 +14,9 @@ export default function App() {
   // 数据缓存：存储多个月份的数据，格式：{ "2025-10": {...}, "2025-11": {...} }
   const [dataCache, setDataCache] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  
+  // 选中日期的活动数据
+  const [selectedDateData, setSelectedDateData] = useState([]);
 
   // 提取表情符号的函数
   const extractEmojis = (text) => {
@@ -62,15 +65,31 @@ export default function App() {
         if (emojis.length > 0) {
           // 如果该日期还没有记录，初始化为空数组
           if (!newActivityData[day]) {
-            newActivityData[day] = [];
+            newActivityData[day] = {icon: [],activities:[]};
           }
           
           // 将表情符号添加到对应日期，避免重复
           emojis.forEach(emoji => {
-            if (!newActivityData[day].includes(emoji)) {
-              newActivityData[day].push(emoji);
+            if (!newActivityData[day].icon.includes(emoji)) {
+              newActivityData[day].icon.push(emoji);
             }
           });
+          
+          // 将活动名称添加到对应日期，避免重复
+          const activityEmoji = emojis[0];
+          const activityType = record.fields.类别.replace(activityEmoji,"");
+          const activityNote = record.fields.备注?.[0].text;
+          const activityAmount = record.fields.金额;
+          const id = record.record_id
+          if (activityEmoji || activityType || activityNote || activityAmount) {
+            newActivityData[day].activities.push({
+              id: id,
+              icon: activityEmoji,
+              title: activityType,
+              description: activityNote,
+              amount: activityAmount
+            });
+          }
         }
       }
     });
@@ -113,7 +132,7 @@ export default function App() {
         
         if (recordsData.data && recordsData.data.items) {
           const convertedData = convertToActivityData(recordsData.data.items);
-          console.log(convertedData)
+          console.log(`${year}年${month}月 转换后数据:`,convertedData)
           return convertedData;
         }
       } else {
@@ -240,6 +259,12 @@ export default function App() {
     }
   };
 
+  // 处理日期选择
+  const handleDateSelect = (date, dayActivities) => {
+    console.log('选中日期:', date, '活动数据:', dayActivities);
+    setSelectedDateData(dayActivities);
+  };
+
   // 模拟记录数据
   const recordData = [
     { id: 1, icon: '🏃', title: '运动', description: '健身房一次性卡', amount: '18.5' },
@@ -252,11 +277,17 @@ export default function App() {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar style="auto" />
       <View style={styles.container}>
-        <Calendar onDateChange={handleDateChange} activityData={activityData} />
+        <Calendar 
+          onDateChange={handleDateChange} 
+          onDateSelect={handleDateSelect}
+          activityData={activityData} 
+        />
 
         <View style={styles.recordsContainer}>
-          <Text style={styles.recordsTitle}>30日活动</Text>
-          {recordData.map(record => (
+          <Text style={styles.recordsTitle}>
+            {selectedDateData.length > 0 ? '选中日期活动' : '30日活动'}
+          </Text>
+          {(selectedDateData.length > 0 ? selectedDateData : recordData).map(record => (
             <RecordItem
               key={record.id}
               icon={record.icon}

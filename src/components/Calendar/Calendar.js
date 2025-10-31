@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
 
-const Calendar = ({ onDateChange, activityData = {} }) => {
+const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -44,7 +44,10 @@ const Calendar = ({ onDateChange, activityData = {} }) => {
     
     // 添加当前月的天数
     for (let i = 1; i <= daysInMonth; i++) {
-      const hasActivity = activityData[i] && activityData[i].length > 0;
+      // const hasActivity = activityData[i] && activityData[i].length > 0;
+      // console.log(i)
+      // console.log(activityData[i]?.activities && activityData[i].activities.length > 0)
+      const hasActivity = activityData[i]?.activities && activityData[i].activities.length > 0
       days.push({
         day: i,
         isCurrentMonth: true,
@@ -126,6 +129,13 @@ const Calendar = ({ onDateChange, activityData = {} }) => {
   // 选择日期
   const selectDate = (date) => {
     setSelectedDate(date);
+    
+    // 通知父组件日期选择，并传递该日期的活动数据
+    if (onDateSelect) {
+      const day = date.getDate();
+      const dayActivities = activityData[day]?.activities || [];
+      onDateSelect(date, dayActivities);
+    }
   };
   
   // 判断日期是否是今天
@@ -224,9 +234,9 @@ const Calendar = ({ onDateChange, activityData = {} }) => {
                     </Text>
 
                     {/* 显示活动图标 */}
-                  {item.isCurrentMonth && item.hasActivity && (
+                  {item.isCurrentMonth && item.hasActivity  && (
                     <View style={styles.activityContainer}>
-                      {item.activities.slice(0, 3).map((icon, iconIndex) => (
+                      {item.activities.icon.slice(0, 3).map((icon, iconIndex) => (
                         <Text key={iconIndex} style={styles.activityIcon}>
                           {icon}
                         </Text>
