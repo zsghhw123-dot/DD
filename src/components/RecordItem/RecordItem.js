@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
-const RecordItem = ({ icon, title, description, amount }) => {
+const RecordItem = ({ icon, title, description, amount, onPress }) => {
   return (
-    <View style={styles.container}>
+    <TouchableOpacity onPress={onPress} style={styles.container}>
       <View style={styles.iconContainer}>
         <Text style={styles.icon}>{icon}</Text>
       </View>
@@ -14,7 +14,7 @@ const RecordItem = ({ icon, title, description, amount }) => {
       <View style={styles.amountContainer}>
         <Text style={styles.amount}>{amount}¥</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

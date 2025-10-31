@@ -4,7 +4,7 @@ import { StyleSheet, Text, View, ScrollView, SafeAreaView } from 'react-native';
 import Calendar from './src/components/Calendar/Calendar';
 import RecordItem from './src/components/RecordItem/RecordItem';
 
-export default function App() {
+export default function App({ navigation }) {
   // 当前显示的年月状态
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 月份从1开始
@@ -269,6 +269,15 @@ export default function App() {
     setSelectedDateData(dayActivities);
   };
 
+  const handleRecordPress = (record) => {
+    if (!record) return;
+    console.log('点击记录:', record);
+    navigation?.navigate('RecordDetail', {
+      recordId: record.id,
+      record: record,
+    });
+  };
+
   
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -295,6 +304,7 @@ export default function App() {
                 title={record.title}
                 description={record.description}
                 amount={record.amount}
+                onPress={() => handleRecordPress(record)}
               />
             ))}
           </ScrollView>
