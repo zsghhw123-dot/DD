@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Animated, Pressable } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
 
 // 导入自定义hooks
@@ -252,20 +252,27 @@ export default function App({ navigation }) {
                 style={[
                   styles.voiceButton,
                   {
-                    backgroundColor: isCancelMode ? colors.app.error : (isPressed ? colors.app.buttonPressed : colors.app.buttonPrimary),
+                    backgroundColor: isCancelMode ? colors.app.error : (isPressed ? colors.app.error : colors.app.buttonPrimary),
                     transform: [{ scale: buttonScale }],
                   }
                 ]}
               >
-                <View style={[styles.circleButton,{backgroundColor: colors.app.buttonSecondary}]}>
-                  <AddIcon width={20} height={20} fill={colors.text.inverse} />
-                </View>
-                <Text style={typographyUtils.getTextStyle('label', colors.text.inverse)}>
-                  长按说话，快速记录
-                </Text>
-                <View style={[styles.circleButton,{backgroundColor: colors.app.buttonTertiary}]}>
-                  <KeyBoardIcon width={20} height={20} fill={colors.text.inverse}></KeyBoardIcon>
-                </View>
+                <Pressable
+                  onPressIn={handleVoiceButtonPressIn}
+                  onPressOut={handleVoiceButtonPressOut}
+                  style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: theme.spacing.sm, paddingHorizontal: theme.spacing.sm }}
+                >
+
+                  <View style={[styles.circleButton,{backgroundColor: colors.app.buttonSecondary}]}>
+                    <AddIcon width={20} height={20} fill={colors.text.inverse} />
+                  </View>
+                  <Text style={typographyUtils.getTextStyle('label', colors.text.inverse)}>
+                    长按说话，快速记录
+                  </Text>
+                  <View style={[styles.circleButton,{backgroundColor: colors.app.buttonTertiary}]}>
+                    <KeyBoardIcon width={20} height={20} fill={colors.text.inverse}></KeyBoardIcon>
+                  </View>
+                </Pressable>
               </Animated.View>
             </Animated.View>
 
@@ -369,9 +376,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.lg,
     shadowColor: colors.shadow.dark,
     flex: 1,
-    paddingVertical: theme.spacing.sm,
     flexDirection: 'row',
-    paddingHorizontal: theme.spacing.sm,
   },
 
   voiceIcon: {
