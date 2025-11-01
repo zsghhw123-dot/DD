@@ -11,12 +11,16 @@ import { useAudioRecording } from './src/hooks/useAudioRecording';
 import Calendar from './src/components/Calendar/Calendar';
 import RecordItem from './src/components/RecordItem/RecordItem';
 import AddIcon from './assets/icons/add.svg';
+import KeyBoardIcon from './assets/icons/keyboard.svg';
+
+// 导入主题系统
+import { theme, colors, typography, typographyUtils } from './src/theme';
 
 export default function App({ navigation }) {
   // 当前显示的年月状态
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  
+
   // 选中日期的活动数据
   const [selectedDateData, setSelectedDateData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -76,7 +80,7 @@ export default function App({ navigation }) {
 
   const onHandlerStateChange = (event) => {
     const { state, translationY } = event.nativeEvent;
-    
+
     if (state === State.BEGAN) {
       handleVoiceButtonPressIn();
     } else if (state === State.ACTIVE) {
@@ -110,7 +114,7 @@ export default function App({ navigation }) {
         // 正常结束录音
         handleVoiceButtonPressOut();
       }
-      
+
       // 重置状态
       setIsCancelMode(false);
       setIsPressed(false);
@@ -138,7 +142,7 @@ export default function App({ navigation }) {
   const handleVoiceButtonPressIn = () => {
     setIsPressed(true);
     startRecording();
-    
+
     // 开始波动动画
     Animated.loop(
       Animated.sequence([
@@ -159,7 +163,7 @@ export default function App({ navigation }) {
   const handleVoiceButtonPressOut = () => {
     setIsPressed(false);
     stopRecording();
-    
+
     // 停止波动动画
     waveAnimation.stopAnimation();
     Animated.timing(waveAnimation, {
@@ -174,17 +178,17 @@ export default function App({ navigation }) {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar style="auto" />
         <View style={styles.container}>
-          <Calendar 
-            onDateChange={handleDateChange} 
+          <Calendar
+            onDateChange={handleDateChange}
             onDateSelect={handleDateSelect}
-            activityData={activityData} 
+            activityData={activityData}
           />
 
           <View style={styles.recordsContainer}>
             <Text style={styles.recordsTitle}>
               {selectedDate.getDate()}日活动
             </Text>
-            <ScrollView 
+            <ScrollView
               style={styles.recordsList}
               showsVerticalScrollIndicator={false}
             >
@@ -205,7 +209,7 @@ export default function App({ navigation }) {
           <View style={styles.voiceButtonWrapper}>
             {/* 上段虚化效果 */}
             <View style={styles.gradientOverlay} />
-            
+
             {/* 提示文字 */}
             {isPressed && (
               <Animated.View style={[styles.hintContainer, { opacity: containerOpacity }]}>
@@ -214,7 +218,7 @@ export default function App({ navigation }) {
                 </Text>
               </Animated.View>
             )}
-            
+
             {/* 语音波动效果 */}
             {isPressed && (
               <View style={styles.waveContainer}>
@@ -240,31 +244,31 @@ export default function App({ navigation }) {
                 ))}
               </View>
             )}
-            
+
             {/* 语音按钮 */}
-            
-              <Animated.View style={[styles.voiceButtonContainer]}>
-                <Animated.View
-                  style={[
-                    styles.voiceButton,
-                    {
-                      backgroundColor: isCancelMode ? '#ff4444' : (isPressed ? '#8DB9A1' : '#B8E2CB'),
-                      transform: [{ scale: buttonScale }],
-                    }
-                  ]}
-                >
-                  <View style={{width:45, height:45, borderRadius:22.5, backgroundColor: '#D9EFE2', justifyContent: 'center', alignItems: 'center'}}>
-                      <AddIcon width={24} height={24} fill="#fff" />
-                  </View>
-                  <Text>
-                    长按说话，快速记录
-                  </Text>
-                  <View>
-                    <Text>3</Text>
-                  </View>
-                </Animated.View>
+
+            <Animated.View style={[styles.voiceButtonContainer]}>
+              <Animated.View
+                style={[
+                  styles.voiceButton,
+                  {
+                    backgroundColor: isCancelMode ? colors.app.error : (isPressed ? colors.app.buttonPressed : colors.app.buttonPrimary),
+                    transform: [{ scale: buttonScale }],
+                  }
+                ]}
+              >
+                <View style={[styles.circleButton,{backgroundColor: colors.app.buttonSecondary}]}>
+                  <AddIcon width={20} height={20} fill={colors.text.inverse} />
+                </View>
+                <Text style={typographyUtils.getTextStyle('label', colors.text.inverse)}>
+                  长按说话，快速记录
+                </Text>
+                <View style={[styles.circleButton,{backgroundColor: colors.app.buttonTertiary}]}>
+                  <KeyBoardIcon width={20} height={20} fill={colors.text.inverse}></KeyBoardIcon>
+                </View>
               </Animated.View>
-           
+            </Animated.View>
+
           </View>
         </View>
       </SafeAreaView>
@@ -275,29 +279,26 @@ export default function App({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f5fcf9',
+    backgroundColor: colors.app.background,
   },
   container: {
     flex: 1,
-    padding: 16,
-    backgroundColor: '#f5fcf9'
+    padding: theme.spacing.md,
+    backgroundColor: colors.app.background,
   },
   recordsContainer: {
-    marginTop: 10,
+    marginTop: theme.spacing.sm,
     flex: 1,
     paddingBottom: 120, // 为语音按钮容器留出空间
   },
   recordsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
-    fontWeight: "bold",
-    marginTop: 10,
-    marginLeft: 10,
-    marginBottom: 15,
+    ...typographyUtils.getTextStyle('h4', colors.text.primary),
+    marginBottom: theme.spacing.sm,
+    marginTop: theme.spacing.sm,
+    marginLeft: theme.spacing.sm,
+    marginBottom: theme.spacing.md,
   },
-  
+
   // 新的语音按钮容器样式
   voiceButtonWrapper: {
     position: 'absolute',
@@ -307,38 +308,36 @@ const styles = StyleSheet.create({
     height: 120,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    paddingBottom: 30,
+    paddingBottom: theme.spacing.xl,
   },
-  
+
   gradientOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: 40,
-    backgroundColor: 'rgba(245, 252, 249, 0.8)',
-    // iOS 渐变效果
-    shadowColor: '#f5fcf9',
+    backgroundColor: colors.opacity.background,
+    ...theme.shadows.lg,
+    shadowColor: colors.app.background,
     shadowOffset: { width: 0, height: -10 },
     shadowOpacity: 0.8,
     shadowRadius: 20,
   },
-  
+
   hintContainer: {
     position: 'absolute',
     bottom: 110,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    backgroundColor: colors.shadow.overlay,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.xl,
   },
-  
+
   hintText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '500',
+    ...typographyUtils.getTextStyle('label', colors.text.inverse),
   },
-  
+
   waveContainer: {
     position: 'absolute',
     bottom: 100,
@@ -347,37 +346,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 40,
   },
-  
+
   waveBar: {
     width: 3,
     height: 20, // 设置固定高度，通过scaleY来变化
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.app.success,
     marginHorizontal: 1,
     borderRadius: 1.5,
   },
-  
+
   voiceButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.md,
   },
-  
+
   voiceButton: {
     borderRadius: 35,
     justifyContent: 'space-between',
     alignItems: 'center',
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    ...theme.shadows.lg,
+    shadowColor: colors.shadow.dark,
     flex: 1,
-    paddingVertical: 10,
-    flexDirection:'row'
+    paddingVertical: theme.spacing.sm,
+    flexDirection: 'row',
+    paddingHorizontal: theme.spacing.sm,
   },
-  
+
   voiceIcon: {
-    fontSize: 28,
+    ...typographyUtils.getTextStyle('display'),
   },
+
+  circleButton: {
+    width: 40, 
+    height: 40, 
+    borderRadius: theme.borderRadius.full, 
+    justifyContent: 'center', 
+    alignItems: 'center'
+  }
 });
