@@ -10,6 +10,7 @@ import { useAudioRecording } from './src/hooks/useAudioRecording';
 // 导入组件
 import Calendar from './src/components/Calendar/Calendar';
 import RecordItem from './src/components/RecordItem/RecordItem';
+import AddIcon from './assets/icons/add.svg';
 
 export default function App({ navigation }) {
   // 当前显示的年月状态
@@ -241,26 +242,29 @@ export default function App({ navigation }) {
             )}
             
             {/* 语音按钮 */}
-            <PanGestureHandler
-              onGestureEvent={onGestureEvent}
-              onHandlerStateChange={onHandlerStateChange}
-            >
+            
               <Animated.View style={[styles.voiceButtonContainer]}>
                 <Animated.View
                   style={[
                     styles.voiceButton,
                     {
-                      backgroundColor: isCancelMode ? '#ff4444' : (isPressed ? '#2E7D32' : '#4CAF50'),
+                      backgroundColor: isCancelMode ? '#ff4444' : (isPressed ? '#8DB9A1' : '#B8E2CB'),
                       transform: [{ scale: buttonScale }],
                     }
                   ]}
                 >
-                  <Text style={styles.voiceIcon}>
-                    {isCancelMode ? '❌' : '🎤'}
+                  <View style={{width:45, height:45, borderRadius:22.5, backgroundColor: '#D9EFE2', justifyContent: 'center', alignItems: 'center'}}>
+                      <AddIcon width={24} height={24} fill="#fff" />
+                  </View>
+                  <Text>
+                    长按说话，快速记录
                   </Text>
+                  <View>
+                    <Text>3</Text>
+                  </View>
                 </Animated.View>
               </Animated.View>
-            </PanGestureHandler>
+           
           </View>
         </View>
       </SafeAreaView>
@@ -355,19 +359,22 @@ const styles = StyleSheet.create({
   voiceButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    paddingHorizontal: 16,
   },
   
   voiceButton: {
-    width: 70,
-    height: 70,
     borderRadius: 35,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    flex: 1,
+    paddingVertical: 10,
+    flexDirection:'row'
   },
   
   voiceIcon: {
