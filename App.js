@@ -219,31 +219,6 @@ export default function App({ navigation }) {
               </Animated.View>
             )}
 
-            {/* 语音波动效果 */}
-            {isPressed && (
-              <View style={styles.waveContainer}>
-                {[...Array(5)].map((_, index) => (
-                  <Animated.View
-                    key={index}
-                    style={[
-                      styles.waveBar,
-                      {
-                        transform: [{
-                          scaleY: waveAnimation.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.2, 1 + index * 0.5],
-                          })
-                        }],
-                        opacity: waveAnimation.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.3, 0.8],
-                        }),
-                      }
-                    ]}
-                  />
-                ))}
-              </View>
-            )}
 
             {/* 语音按钮 */}
 
@@ -252,7 +227,7 @@ export default function App({ navigation }) {
                 style={[
                   styles.voiceButton,
                   {
-                    backgroundColor: isCancelMode ? colors.app.error : (isPressed ? colors.app.error : colors.app.buttonPrimary),
+                    backgroundColor: isCancelMode ? colors.app.error : (isPressed ? "#8DB9A1" : colors.app.buttonPrimary),
                     transform: [{ scale: buttonScale }],
                   }
                 ]}
@@ -260,18 +235,49 @@ export default function App({ navigation }) {
                 <Pressable
                   onPressIn={handleVoiceButtonPressIn}
                   onPressOut={handleVoiceButtonPressOut}
-                  style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: theme.spacing.sm, paddingHorizontal: theme.spacing.sm }}
+                  style={{ flex: 1, flexDirection: 'row', justifyContent: isPressed ? 'center' : 'space-between', alignItems: 'center', paddingVertical: theme.spacing.sm, paddingHorizontal: theme.spacing.sm }}
                 >
-
-                  <View style={[styles.circleButton,{backgroundColor: colors.app.buttonSecondary}]}>
+                  {!isPressed && <View style={[styles.circleButton, { backgroundColor: colors.app.buttonSecondary}]}>
                     <AddIcon width={20} height={20} fill={colors.text.inverse} />
-                  </View>
-                  <Text style={typographyUtils.getTextStyle('label', colors.text.inverse)}>
-                    长按说话，快速记录
-                  </Text>
-                  <View style={[styles.circleButton,{backgroundColor: colors.app.buttonTertiary}]}>
+                  </View>}
+
+
+                  {/* 条件渲染：按下时显示波动动画，否则显示文字 */}
+                  {isPressed ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 40 }}>
+                      {[...Array(5)].map((_, index) => (
+                        <Animated.View
+                          key={index}
+                          style={[
+                            styles.waveBar,
+                            {
+                              transform: [{
+                                scaleY: waveAnimation.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: [0.2, 1 + index * 0.5],
+                                })
+                              }],
+                              opacity: waveAnimation.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0.3, 0.8],
+                              }),
+                            }
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={typographyUtils.getTextStyle('label', colors.text.inverse)}>
+                      长按说话，快速记录
+                    </Text>
+                  )}
+                  
+                
+                  {!isPressed && <View style={[styles.circleButton, { backgroundColor: colors.app.buttonTertiary}]}>
                     <KeyBoardIcon width={20} height={20} fill={colors.text.inverse}></KeyBoardIcon>
-                  </View>
+                  </View>}
+
+
                 </Pressable>
               </Animated.View>
             </Animated.View>
@@ -384,10 +390,10 @@ const styles = StyleSheet.create({
   },
 
   circleButton: {
-    width: 40, 
-    height: 40, 
-    borderRadius: theme.borderRadius.full, 
-    justifyContent: 'center', 
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
     alignItems: 'center'
   }
 });
