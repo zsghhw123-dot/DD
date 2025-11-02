@@ -11,7 +11,7 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator initialRouteName="App">
         <Stack.Screen name="App" component={App} options={{ headerShown: false }} />
-        <Stack.Screen name="RecordDetail" component={RecordDetail} />
+        <Stack.Screen name="RecordDetail" component={RecordDetail} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );

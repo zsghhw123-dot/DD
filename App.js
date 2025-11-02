@@ -201,7 +201,7 @@ export default function App({ navigation }) {
 
               <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => console.log('按钮被点击')}
+              onPress={() => navigation?.navigate('RecordDetail')}
               activeOpacity={0.8}
             >
               <View style={styles.actionButtonContent}>
