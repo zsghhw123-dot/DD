@@ -49,14 +49,17 @@ const convertToActivityData = (records) => {
         if (!newActivityData[day]) {
           newActivityData[day] = {icon: [],activities:[]};
         }
-        
+
+        const hiddenEmojis = ["🍚", "🥛"];
         // 将表情符号添加到对应日期，避免重复
         emojis.forEach(emoji => {
           if (!newActivityData[day].icon.includes(emoji)) {
-            newActivityData[day].icon.push(emoji);
+            if (!hiddenEmojis.includes(emoji)) {
+              newActivityData[day].icon.push(emoji);
+            }
           }
         });
-        
+
         // 将活动名称添加到对应日期，避免重复
         const activityEmoji = emojis[0];
         const activityType = record.fields.类别.replace(activityEmoji,"");

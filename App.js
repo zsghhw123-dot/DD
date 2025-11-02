@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Animated, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Animated, Pressable, Image } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
 
 // 导入自定义hooks
 import { useFeishuApi } from './src/hooks/useFeishuApi';
@@ -60,12 +61,16 @@ export default function App({ navigation }) {
     console.log('选中日期:', date, '活动数据:', dayActivities);
     setSelectedDateData(dayActivities);
     setSelectedDate(date);
+    // 触发震动反馈
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   // 处理记录点击
   const handleRecordPress = (record) => {
     if (!record) return;
     console.log('点击记录:', record);
+    // 触发震动反馈
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     navigation?.navigate('RecordDetail', {
       recordId: record.id,
       record: record,
@@ -142,6 +147,9 @@ export default function App({ navigation }) {
   const handleVoiceButtonPressIn = () => {
     setIsPressed(true);
     startRecording();
+
+    // 触发震动反馈
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // 开始波动动画
     Animated.loop(
@@ -244,28 +252,7 @@ export default function App({ navigation }) {
 
                   {/* 条件渲染：按下时显示波动动画，否则显示文字 */}
                   {isPressed ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 40 }}>
-                      {[...Array(5)].map((_, index) => (
-                        <Animated.View
-                          key={index}
-                          style={[
-                            styles.waveBar,
-                            {
-                              transform: [{
-                                scaleY: waveAnimation.interpolate({
-                                  inputRange: [0, 1],
-                                  outputRange: [0.2, 1 + index * 0.5],
-                                })
-                              }],
-                              opacity: waveAnimation.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0.3, 0.8],
-                              }),
-                            }
-                          ]}
-                        />
-                      ))}
-                    </View>
+                    <Image source={require('./assets/animation/voice.gif')} resizeMode='contain' style={{  height: 40 }} />
                   ) : (
                     <Text style={typographyUtils.getTextStyle('label', colors.text.inverse)}>
                       长按说话，快速记录
