@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Modal } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import * as Location from 'expo-location';
 import { colors, theme } from '../../theme';
 import RubbishBin from '../../../assets/icons/rubbishBin.svg'
 
@@ -35,9 +36,9 @@ const RecordDetail = ({ route, navigation }) => {
   // 状态管理
   const [formData, setFormData] = useState({
     icon: record?.icon,
-    category: record?.title || '健身',
+    category: record?.title || "请选择分类",
     amount: record?.fields?.金额 ,
-    description: record?.description || '今天吃了一碗牛肉面',
+    description: record?.description,
     time: formatTimestamp(record?.fields?.日期),
     location: record?.fields?.位置?.[0]?.text 
   });
@@ -47,8 +48,92 @@ const RecordDetail = ({ route, navigation }) => {
   const [selectedDate, setSelectedDate] = useState(new Date(record?.fields?.日期 || new Date()));
   const [tempDate, setTempDate] = useState(new Date(record?.fields?.日期 || new Date()));
   
+  // 位置获取状态
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  
   console.log('RecordDetail - record:', record);
   console.log('RecordDetail - formData:', formData);
+  
+  // 获取当前位置信息
+  const getCurrentLocation = async () => {
+    try {
+      setIsLoadingLocation(true);
+      
+      // 请求位置权限
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('位置权限被拒绝');
+        setFormData(prev => ({
+          ...prev,
+          location: '位置权限被拒绝'
+        }));
+        setIsLoadingLocation(false);
+        return;
+      }
+
+      // 获取当前位置
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+        timeout: 10000, // 10秒超时
+      });
+
+      // 反向地理编码获取地址信息
+      const reverseGeocode = await Location.reverseGeocodeAsync({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+
+      if (reverseGeocode.length > 0) {
+        const address = reverseGeocode[0];
+        // 构建地址字符串，优先显示更具体的位置信息
+        const locationParts = [
+          address.city || address.region,
+          address.district || address.subregion,
+          address.street,
+          address.name
+        ].filter(Boolean);
+        
+        const locationText = locationParts.length > 0 
+          ? locationParts.join('') 
+          : `${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`;
+        
+        // 更新位置信息
+        setFormData(prev => ({
+          ...prev,
+          location: locationText
+        }));
+      } else {
+        // 如果反向地理编码失败，显示坐标
+        setFormData(prev => ({
+          ...prev,
+          location: `${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`
+        }));
+      }
+    } catch (error) {
+      console.error('获取位置失败:', error);
+      let errorMessage = '获取位置失败';
+      
+      if (error.code === 'E_LOCATION_TIMEOUT') {
+        errorMessage = '位置获取超时';
+      } else if (error.code === 'E_LOCATION_UNAVAILABLE') {
+        errorMessage = '位置服务不可用';
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        location: errorMessage
+      }));
+    } finally {
+      setIsLoadingLocation(false);
+    }
+  };
+
+  // 组件初始化时获取位置（仅新记录）
+  useEffect(() => {
+    if (isNewRecord) {
+      getCurrentLocation();
+    }
+  }, [isNewRecord]);
   
   // 处理日期时间选择
   const handleDateChange = (event, date) => {
@@ -184,9 +269,10 @@ const RecordDetail = ({ route, navigation }) => {
             <View style={styles.fieldValueContainer}>
               <TextInput
                 style={styles.fieldValue}
-                value={formData.location}
+                value={isLoadingLocation ? '正在获取位置...' : formData.location}
                 onChangeText={(text) => setFormData({...formData, location: text})}
                 placeholder="添加位置"
+                editable={!isLoadingLocation}
               />
               <Text style={styles.fieldArrow}>›</Text>
             </View>
