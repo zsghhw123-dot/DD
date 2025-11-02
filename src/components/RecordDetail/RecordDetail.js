@@ -4,6 +4,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { colors, theme } from '../../theme';
 import RubbishBin from '../../../assets/icons/rubbishBin.svg'
+import CategorySelector from '../CategorySelector';
+import { getCategoryById, getDefaultCategory , getCategoryByName} from '../../data/categories';
 
 const RecordDetail = ({ route, navigation }) => {
   const { record } = route?.params || {};
@@ -50,6 +52,18 @@ const RecordDetail = ({ route, navigation }) => {
   
   // 位置获取状态
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  
+  // 分类选择状态
+  const [showCategorySelector, setShowCategorySelector] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    // 如果是编辑现有记录，尝试根据记录的title找到对应分类
+    if (record?.title) {
+      const category = getCategoryByName(record.title)
+      return category
+    }
+    // 新记录使用默认分类
+    return undefined
+  });
   
   console.log('RecordDetail - record:', record);
   console.log('RecordDetail - formData:', formData);
@@ -134,6 +148,20 @@ const RecordDetail = ({ route, navigation }) => {
       getCurrentLocation();
     }
   }, [isNewRecord]);
+
+  // 分类选择处理函数
+  const handleCategorySelect = (category) => {
+    setSelectedCategory(category);
+    setFormData(prev => ({
+      ...prev,
+      category: category.name,
+      icon: category.icon
+    }));
+  };
+
+  const openCategorySelector = () => {
+    setShowCategorySelector(true);
+  };
   
   // 处理日期时间选择
   const handleDateChange = (event, date) => {
@@ -197,10 +225,10 @@ const RecordDetail = ({ route, navigation }) => {
         {/* 图标区域 */}
         <View style={styles.iconSection}>
           <View style={styles.iconContainer}>
-            <Text style={styles.iconEmoji}>{formData.icon}</Text>
+            <Text style={styles.iconEmoji}>{selectedCategory?.icon}</Text>
           </View>
-          <TouchableOpacity style={styles.categoryButton}>
-            <Text style={styles.categoryText}>{formData.category}</Text>
+          <TouchableOpacity style={styles.categoryButton} onPress={openCategorySelector}>
+            <Text style={styles.categoryText}>{selectedCategory?.name || "请选择分类"}</Text>
             <Text style={styles.categoryArrow}>›</Text>
           </TouchableOpacity>
         </View>
@@ -224,6 +252,7 @@ const RecordDetail = ({ route, navigation }) => {
                   }
                 }}
                 keyboardType="numeric"
+                placeholder="输入金额"
               />
               <Text style={styles.fieldArrow}>›</Text>
             </View>
@@ -352,6 +381,14 @@ const RecordDetail = ({ route, navigation }) => {
           </View>
         </View>
       </Modal>
+
+      {/* 分类选择器 */}
+      <CategorySelector
+        visible={showCategorySelector}
+        onClose={() => setShowCategorySelector(false)}
+        onSelect={handleCategorySelect}
+        selectedCategory={selectedCategory}
+      />
     </View>
   );
 };
