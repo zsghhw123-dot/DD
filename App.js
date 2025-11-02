@@ -193,9 +193,23 @@ export default function App({ navigation }) {
           />
 
           <View style={styles.recordsContainer}>
-            <Text style={styles.recordsTitle}>
-              {selectedDate.getDate()}日活动
-            </Text>
+            
+            <View style={styles.recordsHeader}>
+              <Text style={styles.recordsTitle}>
+                {selectedDate.getDate()}日活动
+              </Text>
+
+              <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => console.log('按钮被点击')}
+              activeOpacity={0.8}
+            >
+              <View style={styles.actionButtonContent}>
+                 <Text style={styles.actionButtonText}>添加新记录</Text>
+               </View>
+            </TouchableOpacity>
+            </View>
+
             <ScrollView
               style={styles.recordsList}
               showsVerticalScrollIndicator={false}
@@ -291,12 +305,36 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingBottom: 120, // 为语音按钮容器留出空间
   },
-  recordsTitle: {
-    ...typographyUtils.getTextStyle('h4', colors.text.primary),
-    marginBottom: theme.spacing.sm,
+  recordsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+        marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.sm,
     marginLeft: theme.spacing.sm,
     marginBottom: theme.spacing.md,
+  },
+  recordsTitle: {
+    ...typographyUtils.getTextStyle('h3', colors.app.textPrimary),
+  },
+  actionButton: {
+    backgroundColor: colors.app.surface,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.sm,
+    borderRadius: theme.borderRadius.lg,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+  },
+  actionButtonText: {
+    ...typographyUtils.getTextStyle('button', colors.app.textPrimary),
+    fontWeight: '500',
+    fontSize: 15,
   },
 
   // 新的语音按钮容器样式

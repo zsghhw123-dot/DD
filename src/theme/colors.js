@@ -27,6 +27,11 @@ export const colors = {
     buttonPressed: '#8DB9A1',   // 按钮按下状态
     buttonSecondary: '#D9EFE2', // 次要按钮 (添加按钮)
     buttonTertiary: '#9ABDA9',  // 第三按钮 (键盘按钮)
+
+    // 文本颜色
+    textPrimary: '#5F7065',     // 主要文本
+    textSecondary: '#333333',   // 次要文本
+    textTertiary: '#666666',    // 第三文本
     
     // 状态颜色
     success: '#4CAF50',         // 成功色

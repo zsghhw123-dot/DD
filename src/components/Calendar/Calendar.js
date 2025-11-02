@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
+// 导入主题系统
+import { theme, colors, typography, typographyUtils } from '../../theme';
 
 const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -325,10 +327,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4
   },
   weekDay: {
-    width: 40,
-    textAlign: 'center',
-    fontSize: 14,
-    color: '#666',
+    ...typographyUtils.getTextStyle('body', colors.app.textTertiary),
   },
   daysContainer: {
     backgroundColor: '#fff',
@@ -361,8 +360,7 @@ const styles = StyleSheet.create({
     position: 'relative'
   },
   dayText: {
-    fontSize: 14,
-    color: '#333',
+    ...typographyUtils.getTextStyle('body', colors.app.textPrimary),
   },
   currentMonth: {
     backgroundColor: 'transparent', // 当月无活动时无背景
