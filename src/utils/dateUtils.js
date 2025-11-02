@@ -38,3 +38,43 @@ export const isToday = (date) => {
          date.getMonth() === today.getMonth() &&
          date.getFullYear() === today.getFullYear();
 };
+
+// 检查日期是否在今天之前
+export const isBeforeToday = (date) => {
+  const today = new Date();
+  const compareDate = new Date(date);
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const compareDateStart = new Date(compareDate.getFullYear(), compareDate.getMonth(), compareDate.getDate());
+  
+  return compareDateStart < todayStart;
+};
+
+// 检查日期是否在今天之后
+export const isAfterToday = (date) => {
+  const today = new Date();
+  const compareDate = new Date(date);
+  const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const compareDateStart = new Date(compareDate.getFullYear(), compareDate.getMonth(), compareDate.getDate());
+  
+  return compareDateStart > todayStart;
+};
+
+// 智能时间设置函数
+// 根据选择的日期返回合适的时间：
+// - 今天：返回当前时间
+// - 过去的日期：返回该日期的最晚时间（23:59）
+// - 未来的日期：返回该日期的最早时间（00:00）
+export const getSmartDateTime = (selectedDate) => {
+  const date = new Date(selectedDate);
+  
+  if (isToday(date)) {
+    // 今天：返回当前时间
+    return new Date();
+  } else if (isBeforeToday(date)) {
+    // 过去的日期：返回该日期的最晚时间（23:59）
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 0, 0);
+  } else {
+    // 未来的日期：返回该日期的最早时间（00:00）
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0, 0);
+  }
+};

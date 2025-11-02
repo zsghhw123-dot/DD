@@ -16,6 +16,7 @@ import KeyBoardIcon from './assets/icons/keyboard.svg';
 
 // 导入主题系统
 import { theme, colors, typography, typographyUtils } from './src/theme';
+import { getSmartDateTime } from './src/utils/dateUtils';
 
 export default function App({ navigation }) {
   // 当前显示的年月状态
@@ -201,7 +202,10 @@ export default function App({ navigation }) {
 
               <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => navigation?.navigate('RecordDetail')}
+              onPress={() => navigation?.navigate('RecordDetail', {
+                selectedDate: selectedDate,
+                smartDateTime: getSmartDateTime(selectedDate)
+              })}
               activeOpacity={0.8}
             >
               <View style={styles.actionButtonContent}>

@@ -6,9 +6,10 @@ import { colors, theme } from '../../theme';
 import RubbishBin from '../../../assets/icons/rubbishBin.svg'
 import CategorySelector from '../CategorySelector';
 import { getCategoryById, getDefaultCategory , getCategoryByName} from '../../data/categories';
+import { getSmartDateTime } from '../../utils/dateUtils';
 
 const RecordDetail = ({ route, navigation }) => {
-  const { record } = route?.params || {};
+  const { record, selectedDate: passedSelectedDate, smartDateTime } = route?.params || {};
   const isNewRecord = !record;
   
   // 格式化时间戳为年月日小时分钟格式
@@ -35,20 +36,30 @@ const RecordDetail = ({ route, navigation }) => {
     return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
+  // 获取初始时间 - 对于新记录使用智能时间，对于现有记录使用原有时间
+  const getInitialDateTime = () => {
+    if (isNewRecord && smartDateTime) {
+      return smartDateTime;
+    }
+    return record?.fields?.日期 ? new Date(record.fields.日期) : new Date();
+  };
+
+  const initialDateTime = getInitialDateTime();
+
   // 状态管理
   const [formData, setFormData] = useState({
     icon: record?.icon,
     category: record?.title || "请选择分类",
     amount: record?.fields?.金额 ,
     description: record?.description,
-    time: formatTimestamp(record?.fields?.日期),
+    time: formatTimestamp(initialDateTime),
     location: record?.fields?.位置?.[0]?.text 
   });
   
   // 日期时间选择器状态
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date(record?.fields?.日期 || new Date()));
-  const [tempDate, setTempDate] = useState(new Date(record?.fields?.日期 || new Date()));
+  const [selectedDate, setSelectedDate] = useState(initialDateTime);
+  const [tempDate, setTempDate] = useState(initialDateTime);
   
   // 位置获取状态
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
