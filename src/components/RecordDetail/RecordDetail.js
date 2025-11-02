@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Modal, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { colors, theme } from '../../theme';
@@ -7,6 +7,7 @@ import RubbishBin from '../../../assets/icons/rubbishBin.svg'
 import CategorySelector from '../CategorySelector';
 import { getCategoryById, getDefaultCategory , getCategoryByName} from '../../data/categories';
 import { getSmartDateTime } from '../../utils/dateUtils';
+import { useFeishuApi } from '../../hooks/useFeishuApi';
 
 const RecordDetail = ({ route, navigation }) => {
   const { record, selectedDate: passedSelectedDate, smartDateTime } = route?.params || {};
@@ -63,6 +64,9 @@ const RecordDetail = ({ route, navigation }) => {
   
   // 位置获取状态
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  
+  // 飞书API hook
+  const { createRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -201,10 +205,62 @@ const RecordDetail = ({ route, navigation }) => {
     setShowDatePicker(true);
   };
   
-  const handleSave = () => {
+  const handleSave = async () => {
     console.log('保存记录:', formData);
-    // 这里可以添加保存逻辑
-    navigation.goBack();
+    
+    // 只有新记录才需要保存到飞书
+    if (isNewRecord) {
+      try {
+        // 处理金额，去掉金钱符号
+        const cleanAmount = formData.amount ? Number(formData.amount.replace(/[¥$€£]/g, '')) : 0;
+        
+        // 准备请求数据
+        const saveData = {
+          location: formData.location || '',
+          description: formData.description || '',
+          time: formData.time, // createRecord函数会处理时间戳转换
+          icon: formData.icon || '',
+          category: formData.category || '',
+          amount: cleanAmount
+        };
+        
+        console.log('准备保存的数据:', saveData);
+        
+        // 调用createRecord保存到飞书
+        const result = await createRecord(saveData);
+        
+        if (result.success) {
+          console.log('保存成功!');
+          Alert.alert(
+            '保存成功',
+            '记录已成功添加到飞书多维表格',
+            [
+              {
+                text: '确定',
+                onPress: () => navigation.goBack()
+              }
+            ]
+          );
+        } else {
+          console.error('保存失败:', result.error);
+          Alert.alert(
+            '保存失败',
+            result.error || '保存记录时出现错误，请重试',
+            [{ text: '确定' }]
+          );
+        }
+      } catch (error) {
+        console.error('保存时出错:', error);
+        Alert.alert(
+          '保存失败',
+          '网络错误或服务器异常，请检查网络连接后重试',
+          [{ text: '确定' }]
+        );
+      }
+    } else {
+      // 现有记录的更新逻辑（暂时保持原样）
+      navigation.goBack();
+    }
   };
 
   const handleBack = () => {

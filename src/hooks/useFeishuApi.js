@@ -252,12 +252,76 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     getTenantAccessToken();
   }, []);
 
+  // 创建新记录的函数
+  const createRecord = async (formData) => {
+    if (!accessToken) {
+      console.error('没有访问令牌，无法创建记录');
+      return { success: false, error: '没有访问令牌' };
+    }
+
+    try {
+      // 将时间字符串转换为时间戳
+      const timeString = formData.time; // 格式: "2025/11/02 20:58"
+      
+      // 将格式 "2025/11/02 20:58" 转换为标准格式 "2025-11-02T20:58:00"
+      const standardTimeString = timeString.replace(/\//g, '-').replace(' ', 'T') + ':00';
+      const timestamp = new Date(standardTimeString).getTime();
+      
+      // 检查时间戳是否有效
+      if (isNaN(timestamp)) {
+        throw new Error(`无效的时间格式: ${timeString}`);
+      }
+      
+      console.log('时间转换:', { 
+        original: timeString, 
+        standard: standardTimeString, 
+        timestamp 
+      });
+      const requestBody = {
+        fields: {
+          "位置": formData.location,
+          "备注": formData.description,
+          "日期": timestamp,
+          "类别": formData.icon + formData.category,
+          "金额": Number(formData.amount)
+        }
+      };
+
+      console.log('创建记录请求体:', requestBody);
+
+      const response = await fetch('https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      const result = await response.json();
+      console.log('创建记录响应:', result);
+
+      if (response.ok) {
+        console.log('记录创建成功:', result);
+        return { success: true, data: result };
+      } else {
+        console.error('创建记录失败:', result);
+        return { success: false, error: result.msg || '创建记录失败' };
+      }
+    } catch (error) {
+      console.error('创建记录时出错:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   return {
     accessToken,
     activityData,
     dataCache,
     isLoading,
     handleDateChange,
-    checkAndPreloadData
+    checkAndPreloadData,
+    createRecord
   };
 };
