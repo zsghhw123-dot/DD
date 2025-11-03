@@ -70,7 +70,7 @@ const RecordDetail = ({ route, navigation }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   
   // 飞书API hook
-  const { createRecord, deleteRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
+  const { createRecord, deleteRecord, updateRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -276,11 +276,67 @@ const RecordDetail = ({ route, navigation }) => {
         setIsSaving(false);
       }
     } else {
-      // 现有记录的更新逻辑（暂时保持原样）
-      setIsSaving(false);
-      navigation.goBack();
+      // 现有记录的更新逻辑
+      try {
+        // 处理金额，去掉金钱符号
+        const cleanAmount = formData.amount ? Number(formData.amount.replace(/[¥$€£]/g, '')) : 0;
+        
+        // 准备请求数据
+        const updateData = {
+          location: formData.location || '',
+          description: formData.description || '',
+          time: formData.time, // updateRecord函数会处理时间戳转换
+          icon: formData.icon || '',
+          category: formData.category || '',
+          amount: cleanAmount
+        };
+        
+        console.log('准备更新的数据:', updateData);
+        
+        // 调用updateRecord更新到飞书
+        const result = await updateRecord(record.id, updateData);
+        
+        if (result.success) {
+          console.log('更新成功!');
+          
+          // 刷新当前月份的数据
+          if (refreshCurrentMonthData) {
+            // 延迟1000ms执行，确保其他操作完成
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            refreshCurrentMonthData(passedSelectedDate);
+          }
+          
+          Alert.alert(
+            '更新成功',
+            '记录已成功更新',
+            [
+              {
+                text: '确定',
+                onPress: () => navigation.goBack()
+              }
+            ]
+          );
+        } else {
+          console.error('更新失败:', result.error);
+          Alert.alert(
+            '更新失败',
+            result.error || '更新记录时出现错误，请重试',
+            [{ text: '确定' }]
+          );
+        }
+      } catch (error) {
+        console.error('更新时出错:', error);
+        Alert.alert(
+          '更新失败',
+          '网络错误或服务器异常，请检查网络连接后重试',
+          [{ text: '确定' }]
+        );
+      } finally {
+        // 无论成功失败，都重置保存状态
+        setIsSaving(false);
+      }
     }
-  };
+  }
 
   const handleBack = () => {
     navigation.goBack();

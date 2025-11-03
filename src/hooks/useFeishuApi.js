@@ -406,6 +406,74 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     }
   };
 
+  // 更新记录函数
+  const updateRecord = async (recordId, formData) => {
+    if (!accessToken) {
+      console.error('更新记录失败: 缺少访问令牌');
+      return { success: false, error: '缺少访问令牌' };
+    }   
+
+    if (!recordId) {
+      console.error('更新记录失败: 缺少记录ID');
+      return { success: false, error: '缺少记录ID' };
+    }
+    if (!formData) {
+      console.error('更新记录失败: 缺少表单数据');
+      return { success: false, error: '缺少表单数据' };
+    }
+    try {
+      console.log('正在更新记录，ID:', recordId);
+
+      // 将时间字符串转换为时间戳
+      const timeString = formData.time; // 格式: "2025/11/02 20:58"
+      
+      // 将格式 "2025/11/02 20:58" 转换为标准格式 "2025-11-02T20:58:00"
+      const standardTimeString = timeString.replace(/\//g, '-').replace(' ', 'T') + ':00';
+      const timestamp = new Date(standardTimeString).getTime();
+
+      const requestBody = {
+        fields: {
+          "位置": formData.location,
+          "备注": formData.description,
+          "日期": timestamp,
+          "类别": formData.icon + formData.category,
+          "金额": Number(formData.amount)
+        }
+      };
+      console.log('更新请求体:', requestBody);
+      
+      const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/${recordId}`, {
+        method: 'PUT',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log('更新请求响应状态:', response.status);
+      if (response.ok) {
+        console.log('记录更新成功');
+        return { success: true };
+      } else {
+        // 尝试解析错误响应
+        let errorMessage = '更新记录失败';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.msg || errorMessage;
+        } catch (e) {
+          // 如果无法解析JSON，使用默认错误消息
+        }
+        
+        console.error('更新记录失败:', response.status, errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    } catch (error) {
+      console.error('更新记录时出错:', error);
+      return { success: false, error: error.message || '更新记录时出现网络错误' };
+    }
+  }
   return {
     accessToken,
     activityData,
@@ -416,6 +484,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     createRecord,
     deleteRecord,
     refreshCurrentMonthData,
-    getMonthKey
+    getMonthKey,
+    updateRecord
   };
 };
