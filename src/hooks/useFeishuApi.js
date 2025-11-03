@@ -181,6 +181,39 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     }
   };
 
+  // 获取分类数据
+  const fetchCategories = async (token) => {
+    try {
+      console.log('开始获取分类数据...');
+      
+      const response = await fetch('https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tbl34ZPqCSgBFAAg/records/search', {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          
+        })
+      });
+
+      const data = await response.json();
+      console.log('分类数据请求响应:', data);
+
+      if (response.ok) {
+        console.log('分类数据获取成功:', data);
+        return { success: true, data: data };
+      } else {
+        console.error('获取分类数据失败:', data);
+        return { success: false, error: data.msg || '获取分类数据失败' };
+      }
+    } catch (error) {
+      console.error('获取分类数据时出错:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // 获取飞书tenant_access_token
   const getTenantAccessToken = async () => {
     try {
@@ -203,6 +236,9 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       if (data.tenant_access_token) {
         console.log('tenant_access_token:', data.tenant_access_token);
         setAccessToken(data.tenant_access_token);
+
+        // 获取分类数据
+        await fetchCategories(data.tenant_access_token);
 
         // 获取当前月及前后3个月的数据（共7个月）
         const months = getMonthRange(currentYear, currentMonth, 3);
@@ -473,6 +509,9 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       console.error('更新记录时出错:', error);
       return { success: false, error: error.message || '更新记录时出现网络错误' };
     }
+
+    
+
   }
   return {
     accessToken,
@@ -485,6 +524,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     deleteRecord,
     refreshCurrentMonthData,
     getMonthKey,
-    updateRecord
+    updateRecord,
+    fetchCategories
   };
 };
