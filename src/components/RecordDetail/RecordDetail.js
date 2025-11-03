@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Modal, Alert, ActivityIndicator } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import { colors, theme } from '../../theme';
@@ -64,6 +64,10 @@ const RecordDetail = ({ route, navigation }) => {
   
   // 位置获取状态
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  
+  // 保存和删除操作的加载状态
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // 飞书API hook
   const { createRecord, deleteRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
@@ -208,6 +212,9 @@ const RecordDetail = ({ route, navigation }) => {
   const handleSave = async () => {
     console.log('保存记录:', formData);
     
+    // 设置保存中状态
+    setIsSaving(true);
+    
     // 只有新记录才需要保存到飞书
     if (isNewRecord) {
       try {
@@ -264,9 +271,13 @@ const RecordDetail = ({ route, navigation }) => {
           '网络错误或服务器异常，请检查网络连接后重试',
           [{ text: '确定' }]
         );
+      } finally {
+        // 无论成功失败，都重置保存状态
+        setIsSaving(false);
       }
     } else {
       // 现有记录的更新逻辑（暂时保持原样）
+      setIsSaving(false);
       navigation.goBack();
     }
   };
@@ -278,14 +289,19 @@ const RecordDetail = ({ route, navigation }) => {
   const handleDelete = async () => {
     console.log('删除记录');
     
+    // 设置删除中状态
+    setIsDeleting(true);
+    
     // 如果是新记录（尚未保存到服务器），直接返回
     if (isNewRecord) {
+      setIsDeleting(false);
       navigation.goBack();
       return;
     }
 
     // 检查是否有记录ID
     if (!record?.id) {
+      setIsDeleting(false);
       Alert.alert('错误', '无法删除记录：缺少记录ID');
       return;
     }
@@ -324,6 +340,9 @@ const RecordDetail = ({ route, navigation }) => {
         '删除记录时出现错误，请重试',
         [{ text: '确定' }]
       );
+    } finally {
+      // 无论成功失败，都重置删除状态
+      setIsDeleting(false);
     }
   };
 
@@ -336,8 +355,16 @@ const RecordDetail = ({ route, navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>记录详情</Text>
         {!isNewRecord && (
-          <TouchableOpacity onPress={handleDelete} style={styles.deleteButton}>
-            <RubbishBin style={styles.deleteIcon} />
+          <TouchableOpacity 
+            onPress={handleDelete} 
+            style={styles.deleteButton}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={colors.app.textPrimary} />
+            ) : (
+              <RubbishBin style={styles.deleteIcon} />
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -430,8 +457,19 @@ const RecordDetail = ({ route, navigation }) => {
         </View>
 
         {/* 保存按钮 */}
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>保存</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, isSaving && styles.disabledButton]} 
+          onPress={handleSave}
+          disabled={isSaving || isDeleting}
+        >
+          {isSaving ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="small" color={colors.text.inverse} />
+              <Text style={[styles.saveButtonText, {marginLeft: 8}]}>保存中...</Text>
+            </View>
+          ) : (
+            <Text style={styles.saveButtonText}>保存</Text>
+          )}
         </TouchableOpacity>
       </ScrollView>
       
@@ -743,6 +781,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.app.textPrimary,
+  },
+  
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  disabledButton: {
+    opacity: 0.7,
   },
 });
 
