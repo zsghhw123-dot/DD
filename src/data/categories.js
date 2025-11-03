@@ -141,7 +141,11 @@ export const getCategoryById = (id) => {
 
 // 根据名称获取分类信息
 export const getCategoryByName = (name) => {
-  return categories.find(category => category.name === name);
+  // console.log(name+'执行了getCategoryByName',categories)
+  console.log(name+'的索引为',categories.findIndex(category => { console.log("category.name",category.name , typeof category.name, [...category.name].map(c => c.charCodeAt(0)),"name",name, typeof name, [...name].map(c => c.charCodeAt(0)),"is_equal",category.name === name) 
+    return category.name === name}))
+  console.log("name.replace(/\ufeff/g, \"\")的索引为",[...name.replace(/\ufeff/g, "")].map(c => c.charCodeAt(0)))
+  return categories.find(category => category.name === [...name].filter(c => c.charCodeAt(0) != 65039).join(''));
 };
 
 // 获取默认分类

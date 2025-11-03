@@ -241,7 +241,7 @@ const RecordDetail = ({ route, navigation }) => {
           
           // 刷新当前月份的数据
           if (refreshCurrentMonthData) {
-            // 延迟500ms执行，确保其他操作完成
+            // 延迟1000ms执行，确保其他操作完成
             await new Promise(resolve => setTimeout(resolve, 1000));
             refreshCurrentMonthData(passedSelectedDate);
           }
