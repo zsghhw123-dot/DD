@@ -448,7 +448,7 @@ const RecordDetail = ({ route, navigation }) => {
             <View style={styles.fieldValueContainer}>
               <TextInput
                 style={[styles.fieldValue, styles.amountInput]}
-                value={String(formData.amount)}
+                value={formData.amount == undefined ? '' : String(formData.amount)}
                 onChangeText={(text) => {
                   // 允许输入数字、小数点和空字符串
                   if (text === '' || /^\d*\.?\d*$/.test(text)) {
