@@ -207,10 +207,10 @@ const VoiceButton = ({ onAddRecord, onKeyboardPress }) => {
 const styles = StyleSheet.create({
   voiceButtonWrapper: {
     position: 'absolute',
-    bottom: 0,
+    bottom: -15,
     left: 0,
     right: 0,
-    height: 120,
+    height: 100,
     justifyContent: 'flex-end',
     alignItems: 'center',
     paddingBottom: theme.spacing.xl,

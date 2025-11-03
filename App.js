@@ -143,10 +143,10 @@ export default function App({ navigation }) {
           </View>
 
           {/* 语音按钮组件 */}
-          {/* <VoiceButton 
+          <VoiceButton 
             onAddRecord={handleAddRecord}
             onKeyboardPress={handleKeyboardPress}
-          /> */}
+          />
         </View>
       </SafeAreaView>
     </GestureHandlerRootView>
@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
   recordsContainer: {
     marginTop: theme.spacing.sm,
     flex: 1,
-    // paddingBottom: 120, // 为语音按钮容器留出空间
+    paddingBottom: 70, // 为语音按钮容器留出空间
   },
   recordsHeader: {
     flexDirection: 'row',
