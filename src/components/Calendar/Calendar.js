@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
 // 导入主题系统
 import { theme, colors, typography, typographyUtils } from '../../theme';
+import RightIcon from '../../../assets/icons/right.svg';
+import LeftIcon from '../../../assets/icons/left.svg';
 
 const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -163,11 +165,11 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     return (
       <View style={styles.header}>
         <TouchableOpacity onPress={goToPreviousMonth}>
-          <Text style={styles.headerButton}>{'<'}</Text>
+          <LeftIcon style={styles.headerButton} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{currentDate.getFullYear()}年 {monthNames[currentDate.getMonth()]}</Text>
         <TouchableOpacity onPress={goToNextMonth}>
-          <Text style={styles.headerButton}>{'>'}</Text>
+          <RightIcon style={styles.headerButton} />
         </TouchableOpacity>
       </View>
     );
@@ -276,8 +278,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 15,
+    paddingVertical: theme.spacing.mdLg,
+    paddingHorizontal: theme.spacing.lg,
     backgroundColor: '#fff',
     borderRadius: 20,
     marginBottom: 15,
@@ -293,9 +295,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...typographyUtils.getTextStyle('h3', colors.app.textPrimary),
   },
   weekDaysContainer: {
     flexDirection: 'row',

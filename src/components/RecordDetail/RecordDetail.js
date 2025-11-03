@@ -241,8 +241,8 @@ const RecordDetail = ({ route, navigation }) => {
           
           // 刷新当前月份的数据
           if (refreshCurrentMonthData) {
-            // 延迟1000ms执行，确保其他操作完成
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // 延迟2000ms执行，确保其他操作完成
+            await new Promise(resolve => setTimeout(resolve, 2000));
             refreshCurrentMonthData(passedSelectedDate);
           }
           
@@ -448,7 +448,7 @@ const RecordDetail = ({ route, navigation }) => {
             <View style={styles.fieldValueContainer}>
               <TextInput
                 style={[styles.fieldValue, styles.amountInput]}
-                value={String(formData.amount || '')}
+                value={String(formData.amount)}
                 onChangeText={(text) => {
                   // 允许输入数字、小数点和空字符串
                   if (text === '' || /^\d*\.?\d*$/.test(text)) {
