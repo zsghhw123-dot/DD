@@ -6,7 +6,6 @@ import { theme, colors, typography, typographyUtils } from '../../theme';
 const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const hasFirstFetchData = useRef(false);
   // 初始化时通知父组件当前年月
   useEffect(() => {
     if (onDateChange) {
@@ -15,22 +14,6 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   }, []);
   
 
-  // 等待activityData有值后自动选择当天日期
-  useEffect(() => {
-
-    if (Object.keys(activityData).length > 0 && !hasFirstFetchData.current) {
-      const today = new Date();
-      selectDate(today);
-      hasFirstFetchData.current = true;
-    }
-    console.log("触发了")
-    return ()=>{console.log("清理函数执行了")}
-  }, [activityData]);
-
-  useEffect(() => {
-    console.log("我执行了")
-  }, []);
-  
   // 获取当前月份的天数
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();

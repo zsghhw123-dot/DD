@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Animated, Pressable, Image } from 'react-native';
 import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -32,7 +32,9 @@ export default function App({ navigation }) {
     activityData,
     isLoading,
     handleDateChange: handleFeishuDateChange,
-    refreshCurrentMonthData
+    refreshCurrentMonthData,
+    dataCache,
+    getMonthKey
   } = useFeishuApi(currentYear, currentMonth);
 
   // 使用录音功能hook
@@ -57,6 +59,7 @@ export default function App({ navigation }) {
     setCurrentMonth(month);
     handleFeishuDateChange(year, month);
   };
+  
 
   // 处理日期选择
   const handleDateSelect = (date, dayActivities) => {
@@ -66,6 +69,20 @@ export default function App({ navigation }) {
     // 触发震动反馈
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
+
+  // 监听activityData变化，自动更新selectedDateData
+  useEffect(() => {
+    if (activityData) {
+      const day = selectedDate.getDate();
+      const month = selectedDate.getMonth() + 1;
+      const year = selectedDate.getFullYear();
+      const monthKey = getMonthKey(year, month);
+      const dayActivities = dataCache[monthKey]?.[day]?.activities || [];
+      
+    //   const dayActivities = activityData[day]?.activities || [];
+      setSelectedDateData(dayActivities);
+    }
+  }, [activityData, selectedDate]);
 
   // 处理记录点击
   const handleRecordPress = (record) => {

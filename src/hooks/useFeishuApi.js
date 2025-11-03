@@ -415,6 +415,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     checkAndPreloadData,
     createRecord,
     deleteRecord,
-    refreshCurrentMonthData
+    refreshCurrentMonthData,
+    getMonthKey
   };
 };
