@@ -88,6 +88,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
   const [activityData, setActivityData] = useState({});
   const [dataCache, setDataCache] = useState({});
   const [isLoading, setIsLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
 
   // 获取单个月份的Bitable记录数据
   const getBitableRecords = async (token, year, month) => {
@@ -201,9 +202,21 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       const data = await response.json();
       console.log('分类数据请求响应:', data);
 
-      if (response.ok) {
+      if (response.ok && data.data && data.data.items) {
         console.log('分类数据获取成功:', data);
-        return { success: true, data: data };
+        
+        // 转换API数据格式为应用所需格式
+        const formattedCategories = data.data.items.map(item => ({
+          id: item.fields.id?.[0]?.text || '',
+          icon: item.fields.icon?.[0]?.text || '',
+          name: item.fields.活动类别?.[0]?.text || '',
+          record_id: item.record_id
+        }));
+        
+        console.log('转换后的分类数据:', formattedCategories);
+        setCategories(formattedCategories);
+        
+        return { success: true, data: formattedCategories };
       } else {
         console.error('获取分类数据失败:', data);
         return { success: false, error: data.msg || '获取分类数据失败' };
@@ -513,11 +526,27 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     
 
   }
+  // 根据ID获取分类
+  const getCategoryById = (id) => {
+    return categories.find(category => category.id === id);
+  };
+
+  // 根据名称获取分类
+  const getCategoryByName = (name) => {
+    return categories.find(category => category.name === name);
+  };
+
+  // 获取默认分类
+  const getDefaultCategory = () => {
+    return categories.length > 0 ? categories[0] : null;
+  };
+
   return {
     accessToken,
     activityData,
     dataCache,
     isLoading,
+    categories,
     handleDateChange,
     checkAndPreloadData,
     createRecord,
@@ -525,6 +554,9 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     refreshCurrentMonthData,
     getMonthKey,
     updateRecord,
-    fetchCategories
+    fetchCategories,
+    getCategoryById,
+    getCategoryByName,
+    getDefaultCategory
   };
 };

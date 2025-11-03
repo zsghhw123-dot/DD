@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import { colors, theme } from '../../theme';
 import RubbishBin from '../../../assets/icons/rubbishBin.svg'
 import CategorySelector from '../CategorySelector';
-import { getCategoryById, getDefaultCategory , getCategoryByName} from '../../data/categories';
+
 import { getSmartDateTime } from '../../utils/dateUtils';
 import { useFeishuApi } from '../../hooks/useFeishuApi';
 
@@ -70,7 +70,7 @@ const RecordDetail = ({ route, navigation }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   
   // 飞书API hook
-  const { createRecord, deleteRecord, updateRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
+  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -278,8 +278,7 @@ const RecordDetail = ({ route, navigation }) => {
     } else {
       // 现有记录的更新逻辑
       try {
-        // 处理金额，去掉金钱符号
-        const cleanAmount = formData.amount ? Number(formData.amount.replace(/[¥$€£]/g, '')) : 0;
+
         
         // 准备请求数据
         const updateData = {
@@ -288,7 +287,7 @@ const RecordDetail = ({ route, navigation }) => {
           time: formData.time, // updateRecord函数会处理时间戳转换
           icon: formData.icon || '',
           category: formData.category || '',
-          amount: cleanAmount
+          amount: formData.amount || 0
         };
         
         console.log('准备更新的数据:', updateData);
@@ -429,10 +428,10 @@ const RecordDetail = ({ route, navigation }) => {
         {/* 图标区域 */}
         <View style={styles.iconSection}>
           <View style={styles.iconContainer}>
-            <Text style={styles.iconEmoji}>{selectedCategory?.icon}</Text>
+            <Text style={styles.iconEmoji}>{formData?.icon}</Text>
           </View>
           <TouchableOpacity style={styles.categoryButton} onPress={openCategorySelector}>
-            <Text style={styles.categoryText}>{selectedCategory?.name || "请选择分类"}</Text>
+            <Text style={styles.categoryText}>{formData?.category || "请选择分类"}</Text>
             <Text style={styles.categoryArrow}>›</Text>
           </TouchableOpacity>
         </View>
@@ -603,6 +602,7 @@ const RecordDetail = ({ route, navigation }) => {
         onClose={() => setShowCategorySelector(false)}
         onSelect={handleCategorySelect}
         selectedCategory={selectedCategory}
+        categories={categories}
       />
     </View>
   );

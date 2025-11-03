@@ -1,9 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal } from 'react-native';
 import { colors, theme } from '../../theme';
-import { categories } from '../../data/categories';
 
-const CategorySelector = ({ visible, onClose, onSelect, selectedCategory }) => {
+const CategorySelector = ({ visible, onClose, onSelect, selectedCategory, categories = [] }) => {
   const handleCategorySelect = (category) => {
     onSelect(category);
     onClose();
