@@ -315,6 +315,97 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     }
   };
 
+  // 删除记录函数
+  const deleteRecord = async (recordId) => {
+    if (!accessToken) {
+      console.error('删除记录失败: 缺少访问令牌');
+      return { success: false, error: '缺少访问令牌' };
+    }
+
+    if (!recordId) {
+      console.error('删除记录失败: 缺少记录ID');
+      return { success: false, error: '缺少记录ID' };
+    }
+
+    try {
+      console.log('正在删除记录，ID:', recordId);
+      
+      const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/${recordId}`, {
+        method: 'DELETE',
+        mode: 'cors',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      });
+
+      console.log('删除请求响应状态:', response.status);
+
+      if (response.ok) {
+        console.log('记录删除成功');
+        return { success: true };
+      } else {
+        // 尝试解析错误响应
+        let errorMessage = '删除记录失败';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.msg || errorMessage;
+        } catch (e) {
+          // 如果无法解析JSON，使用默认错误消息
+        }
+        
+        console.error('删除记录失败:', response.status, errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    } catch (error) {
+      console.error('删除记录时出错:', error);
+      return { success: false, error: error.message || '删除记录时出现网络错误' };
+    }
+  };
+
+  // 刷新当前月份数据的函数
+  const refreshCurrentMonthData = async (selectedDate) => {
+    if (!accessToken) {
+      console.error('刷新数据失败: 缺少访问令牌');
+      return;
+    }
+
+    // 如果没有传入selectedDate，使用当前的currentYear和currentMonth
+    let targetYear, targetMonth;
+    if (selectedDate) {
+      targetYear = selectedDate.getFullYear();
+      targetMonth = selectedDate.getMonth() + 1; // getMonth()返回0-11，需要+1
+    } else {
+      targetYear = currentYear;
+      targetMonth = currentMonth;
+    }
+
+    try {
+      console.log(`刷新${targetYear}年${targetMonth}月数据`);
+      setIsLoading(true);
+      
+      // 重新获取目标月份的数据
+      const data = await getBitableRecords(accessToken, targetYear, targetMonth);
+      
+      // 更新缓存
+      const monthKey = getMonthKey(targetYear, targetMonth);
+      const newCache = { ...dataCache };
+      newCache[monthKey] = data;
+      setDataCache(newCache);
+      
+      // 如果刷新的是当前显示的月份，更新activityData
+      if (targetYear === currentYear && targetMonth === currentMonth) {
+        setActivityData(data);
+      }
+      
+      console.log(`${targetYear}年${targetMonth}月数据刷新完成`);
+    } catch (error) {
+      console.error('刷新当前月份数据时出错:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     accessToken,
     activityData,
@@ -322,6 +413,8 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     isLoading,
     handleDateChange,
     checkAndPreloadData,
-    createRecord
+    createRecord,
+    deleteRecord,
+    refreshCurrentMonthData
   };
 };

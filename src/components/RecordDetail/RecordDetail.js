@@ -10,7 +10,7 @@ import { getSmartDateTime } from '../../utils/dateUtils';
 import { useFeishuApi } from '../../hooks/useFeishuApi';
 
 const RecordDetail = ({ route, navigation }) => {
-  const { record, selectedDate: passedSelectedDate, smartDateTime } = route?.params || {};
+  const { record, selectedDate: passedSelectedDate, smartDateTime, refreshCurrentMonthData } = route?.params || {};
   const isNewRecord = !record;
   
   // 格式化时间戳为年月日小时分钟格式
@@ -66,7 +66,7 @@ const RecordDetail = ({ route, navigation }) => {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   
   // 飞书API hook
-  const { createRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
+  const { createRecord, deleteRecord } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -231,6 +231,12 @@ const RecordDetail = ({ route, navigation }) => {
         
         if (result.success) {
           console.log('保存成功!');
+          debugger
+          // 刷新当前月份的数据
+          if (refreshCurrentMonthData) {
+            await refreshCurrentMonthData(passedSelectedDate);
+          }
+          
           Alert.alert(
             '保存成功',
             '记录已成功添加到飞书多维表格',
@@ -267,10 +273,56 @@ const RecordDetail = ({ route, navigation }) => {
     navigation.goBack();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     console.log('删除记录');
-    // 这里可以添加删除逻辑
-    navigation.goBack();
+    
+    // 如果是新记录（尚未保存到服务器），直接返回
+    if (isNewRecord) {
+      navigation.goBack();
+      return;
+    }
+
+    // 检查是否有记录ID
+    if (!record?.id) {
+      Alert.alert('错误', '无法删除记录：缺少记录ID');
+      return;
+    }
+
+    try {
+      // 调用useFeishuApi中的deleteRecord函数
+      const result = await deleteRecord(record.id);
+
+      if (result.success) {
+        // 刷新当前月份的数据
+        if (refreshCurrentMonthData) {
+          await refreshCurrentMonthData(passedSelectedDate);
+        }
+        
+        Alert.alert(
+          '删除成功',
+          '记录已成功删除',
+          [
+            {
+              text: '确定',
+              onPress: () => navigation.goBack()
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          '删除失败',
+          result.error || '删除记录失败',
+          [{ text: '确定' }]
+        );
+      }
+    } catch (error) {
+      console.error('删除记录时出错:', error);
+      Alert.alert(
+        '删除失败',
+        '删除记录时出现错误，请重试',
+        [{ text: '确定' }]
+      );
+    }
   };
 
   return (

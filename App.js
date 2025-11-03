@@ -31,7 +31,8 @@ export default function App({ navigation }) {
   const {
     activityData,
     isLoading,
-    handleDateChange: handleFeishuDateChange
+    handleDateChange: handleFeishuDateChange,
+    refreshCurrentMonthData
   } = useFeishuApi(currentYear, currentMonth);
 
   // 使用录音功能hook
@@ -75,6 +76,7 @@ export default function App({ navigation }) {
     navigation?.navigate('RecordDetail', {
       recordId: record.id,
       record: record,
+      refreshCurrentMonthData: () => refreshCurrentMonthData(selectedDate),
     });
   };
 
@@ -204,7 +206,8 @@ export default function App({ navigation }) {
               style={styles.actionButton}
               onPress={() => navigation?.navigate('RecordDetail', {
                 selectedDate: selectedDate,
-                smartDateTime: getSmartDateTime(selectedDate)
+                smartDateTime: getSmartDateTime(selectedDate),
+                refreshCurrentMonthData: () => refreshCurrentMonthData(selectedDate),
               })}
               activeOpacity={0.8}
             >
