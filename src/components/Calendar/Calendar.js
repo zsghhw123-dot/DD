@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent', // 当月无活动时无背景
   },
   currentMonthWithActivity: {
-    backgroundColor: '#EEF7F2', // 当月有活动时的背景色
+    backgroundColor: colors.app.backgroundAlt, // 当月有活动时的背景色
   },
   otherMonth: {
   },

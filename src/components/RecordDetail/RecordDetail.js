@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform, Modal, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Alert, ActivityIndicator, Image, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,6 +9,9 @@ import CategorySelector from '../CategorySelector';
 
 import { getSmartDateTime } from '../../utils/dateUtils';
 import { useFeishuApi } from '../../hooks/useFeishuApi';
+import AuthImage from '../AuthImage';
+import AddIcon from '../../../assets/icons/add.svg'
+import FalseIcon from '../../../assets/icons/false.svg'
 
 const RecordDetail = ({ route, navigation }) => {
   const { record, selectedDate: passedSelectedDate, smartDateTime, refreshCurrentMonthData } = route?.params || {};
@@ -60,12 +63,18 @@ const RecordDetail = ({ route, navigation }) => {
   });
   
   // 媒体文件状态
-  const [mediaFiles, setMediaFiles] = useState(record?.fields?.媒体文件 || []);
+  const [mediaFiles, setMediaFiles] = useState(record?.fields?.照片.map((item) => ({
+    type: 'image',
+    uri: item.url
+  })) || []);
   
   // 日期时间选择器状态
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(initialDateTime);
   const [tempDate, setTempDate] = useState(initialDateTime);
+  
+  // 媒体选项弹窗状态
+  const [showMediaOptions, setShowMediaOptions] = useState(false);
   
   // 位置获取状态
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -75,7 +84,7 @@ const RecordDetail = ({ route, navigation }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   
   // 飞书API hook
-  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
+  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -166,6 +175,23 @@ const RecordDetail = ({ route, navigation }) => {
     }
   };
 
+  // 请求相册权限
+  useEffect(() => {
+    const requestMediaPermissions = async () => {
+      try {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        console.log('相册权限状态:', status);
+        if (status !== 'granted') {
+          Alert.alert('权限提示', '需要相册权限才能选择图片和视频');
+        }
+      } catch (error) {
+        console.error('请求相册权限失败:', error);
+      }
+    };
+    
+    requestMediaPermissions();
+  }, []);
+
   // 组件初始化时获取位置（仅新记录）
   useEffect(() => {
     if (isNewRecord) {
@@ -175,14 +201,29 @@ const RecordDetail = ({ route, navigation }) => {
 
   // 选择图片
   const pickImage = async () => {
+    console.log('开始选择图片...');
     try {
+      // 检查是否在 Web 环境
+      if (Platform.OS === 'web') {
+        Alert.alert('提示', '在 Web 浏览器中，图片选择功能可能受限');
+        return;
+      }
+      
+      // 再次确认权限
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('权限提示', '需要相册权限才能选择图片');
+        return;
+      }
+      
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        mediaTypes: ['images'],
+      
         quality: 0.8,
       });
 
+      console.log('图片选择结果:', result);
+      
       if (!result.canceled && result.assets.length > 0) {
         const newMedia = [...mediaFiles, ...result.assets.map(asset => ({
           uri: asset.uri,
@@ -200,13 +241,16 @@ const RecordDetail = ({ route, navigation }) => {
 
   // 选择视频
   const pickVideo = async () => {
+    console.log('开始选择视频...');
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+        mediaTypes: ['videos'],
         allowsEditing: true,
         quality: 0.8,
       });
 
+      console.log('视频选择结果:', result);
+      
       if (!result.canceled && result.assets.length > 0) {
         const newMedia = [...mediaFiles, ...result.assets.map(asset => ({
           uri: asset.uri,
@@ -580,14 +624,12 @@ const RecordDetail = ({ route, navigation }) => {
             </View>
             <Text style={styles.fieldLabel}>媒体</Text>
             <View style={styles.fieldValueContainer}>
-              <View style={styles.mediaButtonsContainer}>
-                <TouchableOpacity style={styles.mediaButton} onPress={pickImage}>
-                  <Text style={styles.mediaButtonText}>添加图片</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.mediaButton} onPress={pickVideo}>
-                  <Text style={styles.mediaButtonText}>添加视频</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={() => pickImage()}>
+                <View style={styles.mediaButtonsContainer}>
+                  <AddIcon style={[{ fontSize: 100, fontWeight: 'bold' }]} />
+                </View>
+              </TouchableOpacity>
+
             </View>
           </View>
         </View>
@@ -600,7 +642,11 @@ const RecordDetail = ({ route, navigation }) => {
               {mediaFiles.map((media, index) => (
                 <View key={index} style={styles.mediaItem}>
                   {media.type === 'image' ? (
-                    <Image source={{ uri: media.uri }} style={styles.mediaImage} />
+                    <AuthImage 
+                      uri={media.uri}
+                      accessToken={accessToken}
+                      style={styles.mediaImage}
+                    />
                   ) : (
                     <View style={styles.mediaVideo}>
                       <Text style={styles.mediaVideoIcon}>🎬</Text>
@@ -611,7 +657,8 @@ const RecordDetail = ({ route, navigation }) => {
                     style={styles.mediaDeleteButton} 
                     onPress={() => removeMedia(index)}
                   >
-                    <Text style={styles.mediaDeleteText}>×</Text>
+                    {/* <Text style={styles.mediaDeleteText}>×</Text> */}
+                    <FalseIcon width={12} height={12} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -712,6 +759,45 @@ const RecordDetail = ({ route, navigation }) => {
         selectedCategory={selectedCategory}
         categories={categories}
       />
+
+      {/* 媒体选项底部弹窗 */}
+      <Modal
+        visible={showMediaOptions}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowMediaOptions(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.mediaOptionsContainer}>
+            <TouchableOpacity 
+              style={styles.mediaOptionButton}
+              onPress={() => {
+                setShowMediaOptions(false);
+                pickImage();
+              }}
+            >
+              <Text style={styles.mediaOptionText}>添加图片</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.mediaOptionButton}
+              onPress={() => {
+                setShowMediaOptions(false);
+                pickVideo();
+              }}
+            >
+              <Text style={styles.mediaOptionText}>添加视频</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.mediaOptionButton, styles.cancelButton]}
+              onPress={() => setShowMediaOptions(false)}
+            >
+              <Text style={[styles.mediaOptionText, styles.cancelText]}>取消</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -830,7 +916,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     marginLeft: theme.spacing.md,
   },
   fieldValue: {
@@ -876,6 +962,15 @@ const styles = StyleSheet.create({
   mediaButtonsContainer: {
     flexDirection: 'row',
     gap: theme.spacing.sm,
+    backgroundColor: colors.app.surfaceAlt,
+    padding: theme.spacing.xl,
+    borderRadius: theme.borderRadius.sm,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   mediaButton: {
     backgroundColor: colors.app.buttonSecondary,
@@ -903,7 +998,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   mediaScrollView: {
-    marginHorizontal: -theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
   },
   mediaItem: {
     marginRight: theme.spacing.md,
@@ -936,8 +1031,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    width: 24,
-    height: 24,
+    width: 18,
+    height: 18,
     borderRadius: 12,
     backgroundColor: colors.app.error,
     justifyContent: 'center',
@@ -1034,6 +1129,42 @@ const styles = StyleSheet.create({
   disabledButton: {
     opacity: 0.7,
   },
+
+  // 媒体选项弹窗样式
+  mediaOptionsContainer: {
+    backgroundColor: colors.app.surface,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    padding: theme.spacing.md,
+    paddingBottom: theme.spacing.xl + theme.spacing.md,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  mediaOptionButton: {
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[200],
+  },
+  mediaOptionText: {
+    fontSize: 18,
+    color: colors.app.textPrimary,
+    textAlign: 'center',
+  },
+  cancelButton: {
+    borderBottomWidth: 0,
+    marginTop: theme.spacing.md,
+    backgroundColor: colors.neutral[100],
+    borderRadius: theme.borderRadius.md,
+  },
+  cancelText: {
+    color: colors.app.textSecondary,
+    fontWeight: '600',
+  },
+
+  
 });
 
 export default RecordDetail;
