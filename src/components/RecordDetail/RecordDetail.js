@@ -59,11 +59,14 @@ const RecordDetail = ({ route, navigation }) => {
     description: record?.description,
     time: formatTimestamp(initialDateTime),
     location: record?.fields?.位置?.[0]?.text,
-    media: record?.fields?.媒体文件 || []
+    media: record?.fields?.媒体文件 || [],
+    照片: record?.fields?.照片?.map((item) => ({
+      file_token: item.file_token
+    })) || []
   });
   
   // 媒体文件状态
-  const [mediaFiles, setMediaFiles] = useState(record?.fields?.照片.map((item) => ({
+  const [mediaFiles, setMediaFiles] = useState(record?.fields?.照片?.map((item) => ({
     type: 'image',
     uri: item.url
   })) || []);
@@ -83,8 +86,11 @@ const RecordDetail = ({ route, navigation }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // 文件上传加载状态
+  const [isUploading, setIsUploading] = useState(false);
+  
   // 飞书API hook
-  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
+  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken, uploadFile} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -233,9 +239,27 @@ const RecordDetail = ({ route, navigation }) => {
         setMediaFiles(newMedia);
         setFormData(prev => ({...prev, media: newMedia}));
       }
+      
+      // 开始上传，显示加载状态
+      setIsUploading(true);
+      const uploadResult = await uploadFile(result.assets[0].uri, result.assets[0].fileName || `image_${Date.now()}.jpg`);
+      
+      if (uploadResult.success && uploadResult.file_token) {
+        console.log('文件上传成功，file_token:', uploadResult.file_token);
+        setFormData(prev => ({...prev, 照片: [...prev.照片, {
+          file_token: uploadResult.file_token
+        }]}));
+      } else {
+        console.error('文件上传失败:', uploadResult.error);
+        Alert.alert('上传失败', '图片上传失败，请重试');
+      }
+      
     } catch (error) {
       console.error('选择图片失败:', error);
       Alert.alert('错误', '选择图片失败，请重试');
+    } finally {
+      // 无论成功失败，都隐藏加载状态
+      setIsUploading(false);
     }
   };
 
@@ -270,6 +294,7 @@ const RecordDetail = ({ route, navigation }) => {
   const removeMedia = (index) => {
     const newMedia = mediaFiles.filter((_, i) => i !== index);
     setMediaFiles(newMedia);
+    setFormData(prev => ({...prev, 照片: prev.照片.filter((_, i) => i !== index)}));
     setFormData(prev => ({...prev, media: newMedia}));
   };
 
@@ -394,7 +419,8 @@ const RecordDetail = ({ route, navigation }) => {
           icon: formData.icon || '',
           category: formData.category || '',
           amount: formData.amount || 0,
-          media: formData.media || [] // 添加媒体文件信息
+          media: formData.media || [], // 添加媒体文件信息
+          照片: formData.照片 || [], // 添加照片信息
         };
         
         console.log('准备更新的数据:', updateData);
@@ -624,9 +650,19 @@ const RecordDetail = ({ route, navigation }) => {
             </View>
             <Text style={styles.fieldLabel}>媒体</Text>
             <View style={styles.fieldValueContainer}>
-              <TouchableOpacity onPress={() => pickImage()}>
+              <TouchableOpacity 
+                onPress={() => pickImage()} 
+                disabled={isUploading}
+              >
                 <View style={styles.mediaButtonsContainer}>
-                  <AddIcon style={[{ fontSize: 100, fontWeight: 'bold' }]} />
+                  {isUploading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={colors.primary[500]} />
+                      <Text style={[styles.uploadingText, {marginLeft: 8}]}>上传中...</Text>
+                    </View>
+                  ) : (
+                    <AddIcon style={[{ fontSize: 100, fontWeight: 'bold' }]} />
+                  )}
                 </View>
               </TouchableOpacity>
 
@@ -1124,6 +1160,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  
+  uploadingText: {
+    fontSize: 14,
+    color: colors.app.textPrimary,
+    fontWeight: '500',
   },
   
   disabledButton: {

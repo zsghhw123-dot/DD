@@ -14,7 +14,7 @@ const getMonthKey = (year, month) => {
 // 计算前后n个月的年月列表
 const getMonthRange = (centerYear, centerMonth, n = 3) => {
   const months = [];
-  
+
   for (let i = -n; i <= n; i++) {
     const date = new Date(centerYear, centerMonth - 1 + i, 1);
     months.push({
@@ -22,14 +22,14 @@ const getMonthRange = (centerYear, centerMonth, n = 3) => {
       month: date.getMonth() + 1
     });
   }
-  
+
   return months;
 };
 
 // 将飞书API数据转换为activityData格式
 const convertToActivityData = (records) => {
   const newActivityData = {};
-  
+
   if (!records || !Array.isArray(records)) {
     return newActivityData;
   }
@@ -39,15 +39,15 @@ const convertToActivityData = (records) => {
     const day = record.fields.日?.value?.[0];
     // 获取类别
     const category = record.fields.类别;
-    
+
     if (day && category) {
       // 提取类别中的表情符号
       const emojis = extractEmojis(category);
-      
+
       if (emojis.length > 0) {
         // 如果该日期还没有记录，初始化为空数组
         if (!newActivityData[day]) {
-          newActivityData[day] = {icon: [],activities:[]};
+          newActivityData[day] = { icon: [], activities: [] };
         }
 
         const hiddenEmojis = ["🍚", "🥛"];
@@ -62,7 +62,7 @@ const convertToActivityData = (records) => {
 
         // 将活动名称添加到对应日期，避免重复
         const activityEmoji = emojis[0];
-        const activityType = record.fields.类别.replace(activityEmoji,"");
+        const activityType = record.fields.类别.replace(activityEmoji, "");
         const activityNote = record.fields.备注?.[0].text;
         const activityAmount = record.fields.金额;
         const id = record.record_id
@@ -111,12 +111,12 @@ export const useFeishuApi = (currentYear, currentMonth) => {
               },
               {
                 field_name: "月",
-                operator: "is", 
+                operator: "is",
                 value: [month.toString()]
               }
             ]
           },
-          sort:[{
+          sort: [{
             field_name: "日期",
             desc: true
           }]
@@ -126,10 +126,10 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       if (response.ok) {
         const recordsData = await response.json();
         console.log(`${year}年${month}月 Bitable数据:`, recordsData);
-        
+
         if (recordsData.data && recordsData.data.items) {
           const convertedData = convertToActivityData(recordsData.data.items);
-          console.log(`${year}年${month}月 转换后数据:`,convertedData)
+          console.log(`${year}年${month}月 转换后数据:`, convertedData)
           return convertedData;
         }
       } else {
@@ -145,36 +145,36 @@ export const useFeishuApi = (currentYear, currentMonth) => {
   const fetchMultipleMonths = async (token, months) => {
     setIsLoading(true);
     const newCache = { ...dataCache };
-    
+
     try {
       // 并行请求所有月份的数据
       const promises = months.map(async ({ year, month }) => {
         const monthKey = getMonthKey(year, month);
-        
+
         // 如果缓存中已有数据，跳过请求
         if (newCache[monthKey]) {
           return { monthKey, data: newCache[monthKey] };
         }
-        
+
         const data = await getBitableRecords(token, year, month);
         return { monthKey, data };
       });
-      
+
       const results = await Promise.all(promises);
-      
+
       // 更新缓存
       results.forEach(({ monthKey, data }) => {
         newCache[monthKey] = data;
       });
-      
+
       setDataCache(newCache);
-      
+
       // 更新当前显示的activityData（只有当activityData没有值时才更新）
       const currentMonthKey = getMonthKey(currentYear, currentMonth);
       if (newCache[currentMonthKey] && Object.keys(activityData).length === 0) {
         setActivityData(newCache[currentMonthKey]);
       }
-      
+
     } catch (error) {
       console.error('批量获取数据时出错:', error);
     } finally {
@@ -186,7 +186,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
   const fetchCategories = async (token) => {
     try {
       console.log('开始获取分类数据...');
-      
+
       const response = await fetch('https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tbl34ZPqCSgBFAAg/records/search', {
         method: 'POST',
         mode: 'cors',
@@ -195,7 +195,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          
+
         })
       });
 
@@ -204,7 +204,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
       if (response.ok && data.data && data.data.items) {
         console.log('分类数据获取成功:', data);
-        
+
         // 转换API数据格式为应用所需格式
         const formattedCategories = data.data.items.map(item => ({
           id: item.fields.id?.[0]?.text || '',
@@ -212,10 +212,10 @@ export const useFeishuApi = (currentYear, currentMonth) => {
           name: item.fields.活动类别?.[0]?.text || '',
           record_id: item.record_id
         }));
-        
+
         console.log('转换后的分类数据:', formattedCategories);
         setCategories(formattedCategories);
-        
+
         return { success: true, data: formattedCategories };
       } else {
         console.error('获取分类数据失败:', data);
@@ -273,7 +273,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       const monthKey = getMonthKey(y, m);
       return !dataCache[monthKey];
     });
-    
+
     if (missingMonths.length > 0) {
       console.log('需要预加载的月份:', missingMonths);
       await fetchMultipleMonths(accessToken, missingMonths);
@@ -289,7 +289,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     } else {
       setActivityData({});
     }
-    
+
     // 检查是否需要预加载新的月份数据
     if (accessToken) {
       checkAndPreloadData(year, month);
@@ -311,20 +311,20 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     try {
       // 将时间字符串转换为时间戳
       const timeString = formData.time; // 格式: "2025/11/02 20:58"
-      
+
       // 将格式 "2025/11/02 20:58" 转换为标准格式 "2025-11-02T20:58:00"
       const standardTimeString = timeString.replace(/\//g, '-').replace(' ', 'T') + ':00';
       const timestamp = new Date(standardTimeString).getTime();
-      
+
       // 检查时间戳是否有效
       if (isNaN(timestamp)) {
         throw new Error(`无效的时间格式: ${timeString}`);
       }
-      
-      console.log('时间转换:', { 
-        original: timeString, 
-        standard: standardTimeString, 
-        timestamp 
+
+      console.log('时间转换:', {
+        original: timeString,
+        standard: standardTimeString,
+        timestamp
       });
       const requestBody = {
         fields: {
@@ -378,7 +378,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
     try {
       console.log('正在删除记录，ID:', recordId);
-      
+
       const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/${recordId}`, {
         method: 'DELETE',
         mode: 'cors',
@@ -402,7 +402,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
         } catch (e) {
           // 如果无法解析JSON，使用默认错误消息
         }
-        
+
         console.error('删除记录失败:', response.status, errorMessage);
         return { success: false, error: errorMessage };
       }
@@ -432,21 +432,21 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     try {
       console.log(`刷新${targetYear}年${targetMonth}月数据`);
       setIsLoading(true);
-      
+
       // 重新获取目标月份的数据
       const data = await getBitableRecords(accessToken, targetYear, targetMonth);
-      
+
       // 更新缓存
       const monthKey = getMonthKey(targetYear, targetMonth);
       const newCache = { ...dataCache };
       newCache[monthKey] = data;
       setDataCache(newCache);
-      
+
       // 如果刷新的是当前显示的月份，更新activityData
       if (targetYear === currentYear && targetMonth === currentMonth) {
         setActivityData(data);
       }
-      
+
       console.log(`${targetYear}年${targetMonth}月数据刷新完成`);
     } catch (error) {
       console.error('刷新当前月份数据时出错:', error);
@@ -460,7 +460,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     if (!accessToken) {
       console.error('更新记录失败: 缺少访问令牌');
       return { success: false, error: '缺少访问令牌' };
-    }   
+    }
 
     if (!recordId) {
       console.error('更新记录失败: 缺少记录ID');
@@ -475,7 +475,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
       // 将时间字符串转换为时间戳
       const timeString = formData.time; // 格式: "2025/11/02 20:58"
-      
+
       // 将格式 "2025/11/02 20:58" 转换为标准格式 "2025-11-02T20:58:00"
       const standardTimeString = timeString.replace(/\//g, '-').replace(' ', 'T') + ':00';
       const timestamp = new Date(standardTimeString).getTime();
@@ -486,11 +486,14 @@ export const useFeishuApi = (currentYear, currentMonth) => {
           "备注": formData.description,
           "日期": timestamp,
           "类别": formData.icon + formData.category,
-          "金额": Number(formData.amount)
+          "金额": Number(formData.amount),
+          "照片": formData.照片.map((item) => ({
+            file_token: item.file_token
+          })) || []
         }
       };
       console.log('更新请求体:', requestBody);
-      
+
       const response = await fetch(`https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/${recordId}`, {
         method: 'PUT',
         mode: 'cors',
@@ -514,7 +517,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
         } catch (e) {
           // 如果无法解析JSON，使用默认错误消息
         }
-        
+
         console.error('更新记录失败:', response.status, errorMessage);
         return { success: false, error: errorMessage };
       }
@@ -523,9 +526,112 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       return { success: false, error: error.message || '更新记录时出现网络错误' };
     }
 
-    
+
 
   }
+
+  // 上传文件到飞书
+  const uploadFile = async (fileUri, fileName) => {
+    
+    console.log('uploadFile:', fileUri, fileName);
+    if (!accessToken) {
+      console.error('上传文件失败: 缺少访问令牌');
+      return { success: false, error: '缺少访问令牌' };
+    }
+
+    if (!fileUri) {
+      console.error('上传文件失败: 缺少文件URI');
+      return { success: false, error: '缺少文件URI' };
+    }
+
+    try {
+      console.log('开始上传文件:', fileName, 'URI:', fileUri);
+
+      // 使用 fetch 将文件URI转换为二进制Blob
+      const fileResponse = await fetch(fileUri);
+      const blob = await fileResponse.blob();
+
+      // 从Blob中获取文件大小和类型
+      const fileSize = blob.size;
+      const fileType = blob.type;
+
+      console.log('从Blob获取到文件信息 - 大小:', fileSize, 'bytes, 类型:', fileType);
+
+      // 处理文件名 - 如果没有提供，从URI中提取或使用默认值
+      const finalFileName = fileName || (() => {
+        // 尝试从文件URI中提取文件名
+        const uriParts = fileUri.split('/');
+        const lastPart = uriParts[uriParts.length - 1];
+        if (lastPart && lastPart.includes('.')) {
+          return lastPart;
+        }
+        return `uploaded_${Date.now()}.jpg`;
+      })();
+
+      // 创建 FormData
+      const formData = new FormData();
+
+      // 添加文件字段 - 以二进制形式添加文件
+      formData.append('file', {
+        uri: fileUri, // 本地文件路径
+        name: fileName, // 文件名（可根据需要调整）
+        type: fileType // 文件类型（可根据需要调整）
+      });
+
+      
+      // 添加其他必要字段
+      formData.append('file_name', finalFileName);
+      formData.append('parent_type', 'bitable_image');
+      formData.append('parent_node', 'MhlTb2tO1a5IoOsE9r3cGIuqnmg');
+      formData.append('size', fileSize.toString());
+
+      console.log('准备上传的表单数据:', {
+        file_name: finalFileName,
+        parent_type: 'bitable_image',
+        parent_node: 'MhlTb2tO1a5IoOsE9r3cGIuqnmg',
+        size: fileSize,
+      });
+
+      // 发送上传请求
+      const response = await fetch('https://open.feishu.cn/open-apis/drive/v1/medias/upload_all', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'multipart/form-data; boundary=---7MA4YWxkTrZu0gW'
+        },
+        body: formData,
+      });
+      console.log('imageuploadformdata:', formData);
+      console.log('file:', formData.get('file').toString());
+
+      const result = await response.json();
+      console.log('文件上传响应:', result);
+
+      if (response.ok && result.data && result.data.file_token) {
+        console.log('文件上传成功，file_token:', result.data.file_token);
+        return {
+          success: true,
+          data: result.data,
+          file_token: result.data.file_token
+        };
+      } else {
+        console.error('文件上传失败:', result);
+        return {
+          success: false,
+          error: result.msg || '文件上传失败',
+          code: result.code
+        };
+      }
+    } catch (error) {
+      console.error('上传文件时出错:', error);
+      return {
+        success: false,
+        error: error.message || '上传文件时出现网络错误'
+      };
+    }
+  };
+
+
   // 根据ID获取分类
   const getCategoryById = (id) => {
     return categories.find(category => category.id === id);
@@ -554,6 +660,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
     refreshCurrentMonthData,
     getMonthKey,
     updateRecord,
+    uploadFile,
     fetchCategories,
     getCategoryById,
     getCategoryByName,
