@@ -581,16 +581,9 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       
       // 添加其他必要字段
       formData.append('file_name', finalFileName);
-      formData.append('parent_type', 'bitable_image');
+      formData.append('parent_type', 'bitable_image'); 
       formData.append('parent_node', 'MhlTb2tO1a5IoOsE9r3cGIuqnmg');
       formData.append('size', fileSize.toString());
-
-      console.log('准备上传的表单数据:', {
-        file_name: finalFileName,
-        parent_type: 'bitable_image',
-        parent_node: 'MhlTb2tO1a5IoOsE9r3cGIuqnmg',
-        size: fileSize,
-      });
 
       // 发送上传请求
       const response = await fetch('https://open.feishu.cn/open-apis/drive/v1/medias/upload_all', {

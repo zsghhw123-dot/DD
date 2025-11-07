@@ -205,6 +205,29 @@ const RecordDetail = ({ route, navigation }) => {
     }
   }, [isNewRecord]);
 
+  // 显示媒体选择弹窗
+  const showMediaPicker = () => {
+    Alert.alert(
+      '选择媒体',
+      '请选择要添加的媒体类型',
+      [
+        {
+          text: '图片',
+          onPress: () => pickImage()
+        },
+        {
+          text: '视频',
+          onPress: () => pickVideo()
+        },
+        {
+          text: '取消',
+          style: 'cancel'
+        }
+      ],
+      { cancelable: true }
+    );
+  };
+
   // 选择图片
   const pickImage = async () => {
     console.log('开始选择图片...');
@@ -283,6 +306,22 @@ const RecordDetail = ({ route, navigation }) => {
         }))];
         setMediaFiles(newMedia);
         setFormData(prev => ({...prev, media: newMedia}));
+        
+        // 开始上传，显示加载状态
+        console.log('开始上传视频...');
+        setIsUploading(true);
+        const uploadResult = await uploadFile(result.assets[0].uri, result.assets[0].fileName || `video_${Date.now()}.mp4`);
+        
+        if (uploadResult.success && uploadResult.file_token) {
+          console.log('文件上传成功，file_token:', uploadResult.file_token);
+          setFormData(prev => ({...prev, 照片: [...prev.照片, {
+            file_token: uploadResult.file_token
+          }]}));
+        } else {
+          console.error('文件上传失败:', uploadResult.error);
+          Alert.alert('上传失败', '视频上传失败，请重试');
+        }
+        
       }
     } catch (error) {
       console.error('选择视频失败:', error);
@@ -651,7 +690,7 @@ const RecordDetail = ({ route, navigation }) => {
             <Text style={styles.fieldLabel}>媒体</Text>
             <View style={styles.fieldValueContainer}>
               <TouchableOpacity 
-                onPress={() => pickImage()} 
+                onPress={pickImage} 
                 disabled={isUploading}
               >
                 <View style={styles.mediaButtonsContainer}>
