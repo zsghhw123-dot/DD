@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Alert, ActivityIndicator, Image, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
@@ -10,6 +10,7 @@ import CategorySelector from '../CategorySelector';
 import { getSmartDateTime } from '../../utils/dateUtils';
 import { useFeishuApi } from '../../hooks/useFeishuApi';
 import AuthImage from '../AuthImage';
+import AuthVideo from '../AuthVideo';
 import AddIcon from '../../../assets/icons/add.svg'
 import FalseIcon from '../../../assets/icons/false.svg'
 
@@ -67,7 +68,7 @@ const RecordDetail = ({ route, navigation }) => {
   
   // 媒体文件状态
   const [mediaFiles, setMediaFiles] = useState(record?.fields?.照片?.map((item) => ({
-    type: 'image',
+    type: item.type,
     uri: item.url
   })) || []);
   
@@ -716,17 +717,18 @@ const RecordDetail = ({ route, navigation }) => {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
               {mediaFiles.map((media, index) => (
                 <View key={index} style={styles.mediaItem}>
-                  {media.type === 'image' ? (
+                  {media.type.includes('image') ? (
                     <AuthImage 
                       uri={media.uri}
                       accessToken={accessToken}
                       style={styles.mediaImage}
                     />
                   ) : (
-                    <View style={styles.mediaVideo}>
-                      <Text style={styles.mediaVideoIcon}>🎬</Text>
-                      <Text style={styles.videoText}>视频</Text>
-                    </View>
+                    <AuthVideo 
+                      uri={media.uri}
+                      accessToken={accessToken}
+                      style={styles.mediaVideo}
+                    />
                   )}
                   <TouchableOpacity 
                     style={styles.mediaDeleteButton} 
