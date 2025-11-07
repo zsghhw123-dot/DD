@@ -581,7 +581,7 @@ const RecordDetail = ({ route, navigation }) => {
         <TouchableOpacity onPress={handleBack} style={styles.backButton}>
           <Text style={styles.backIcon}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>记录详情</Text>
+        {!isNewRecord && <Text style={styles.headerTitle}>记录详情</Text>}
         {!isNewRecord && (
           <TouchableOpacity 
             onPress={handleDelete} 
