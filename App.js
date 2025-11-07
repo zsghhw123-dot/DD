@@ -136,6 +136,7 @@ export default function App({ navigation }) {
                   title={record.title}
                   description={record.description}
                   amount={record.amount}
+                  fields={record.fields || {}}
                   onPress={() => handleRecordPress(record)}
                 />
               ))}

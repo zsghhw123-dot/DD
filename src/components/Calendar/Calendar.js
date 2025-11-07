@@ -74,7 +74,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
         });
       }
     }
-    
+    console.log('生成的日历数据:', days);
     return days;
   };
   
@@ -211,6 +211,16 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
               } else if (item.hasActivity) {
                 // 当月有活动的日期 - 绿色背景
                 dayContainerStyle.push(styles.currentMonthWithActivity);
+                
+                // 检查是否有包含照片的活动
+                const hasPhotos = item.activities.activities.some(activity => 
+                  activity.fields?.照片 && activity.fields.照片.length > 0
+                );
+                
+                // 当有照片时，添加朦胧效果样式
+                if (hasPhotos) {
+                  dayContainerStyle.push(styles.withPhotos);
+                }
               } else {
                 // 当月无活动的日期 - 无背景
                 dayContainerStyle.push(styles.currentMonth);
@@ -239,7 +249,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
                     </Text>
 
                     {/* 显示活动图标 */}
-                  {item.isCurrentMonth && item.hasActivity  && (
+                  {item.isCurrentMonth && item.hasActivity && item.activities.icon?.length > 0 && (
                     <View style={styles.activityContainer}>
                       {item.activities.icon.slice(0, 3).map((icon, iconIndex) => (
                         <Text key={iconIndex} style={styles.activityIcon}>
@@ -366,6 +376,13 @@ const styles = StyleSheet.create({
   today: {
     borderWidth: 1,
     borderColor: '#a8e6cf',
+  },
+  withPhotos: {
+    shadowColor: '#ff6b6b',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   recordIndicator: {
     width: 6,
