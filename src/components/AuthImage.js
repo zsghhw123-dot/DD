@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Image, TouchableOpacity, Modal, View, StyleSheet, Dimensions, PanResponder, Animated, Text } from 'react-native';
+import { Image, TouchableOpacity, Modal, View, StyleSheet, Dimensions, PanResponder, Animated, Text, ActivityIndicator } from 'react-native';
 
 const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
   const [imageUri, setImageUri] = useState(null);
@@ -185,16 +185,22 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
   return (
     <>
       <TouchableOpacity onPress={handlePress} activeOpacity={0.8}>
-        <Image
-          source={{ uri: imageUri || uri }}
-          style={style}
-          onError={(e) => {
-            console.log('Image组件加载失败:', e.nativeEvent.error);
-            console.log('最终URI:', imageUri || uri);
-          }}
-          onLoad={() => console.log('Image组件加载成功:', uri)}
-          {...props}
-        />
+        {isLoading ? (
+          <View style={[style, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0' }]}>
+            <ActivityIndicator size="small" color="#0000ff" />
+          </View>
+        ) : (
+          <Image
+            source={{ uri: imageUri || uri }}
+            style={style}
+            onError={(e) => {
+              console.log('Image组件加载失败:', e.nativeEvent.error);
+              console.log('最终URI:', imageUri || uri);
+            }}
+            onLoad={() => console.log('Image组件加载成功:', uri)}
+            {...props}
+          />
+        )}
       </TouchableOpacity>
 
       <Modal

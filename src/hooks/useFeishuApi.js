@@ -332,7 +332,8 @@ export const useFeishuApi = (currentYear, currentMonth) => {
           "备注": formData.description,
           "日期": timestamp,
           "类别": formData.icon + formData.category,
-          "金额": Number(formData.amount)
+          "金额": Number(formData.amount),
+          "照片": formData.照片 || [], // 添加照片信息
         }
       };
 

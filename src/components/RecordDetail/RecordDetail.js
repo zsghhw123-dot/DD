@@ -399,7 +399,8 @@ const RecordDetail = ({ route, navigation }) => {
           icon: formData.icon || '',
           category: formData.category || '',
           amount: cleanAmount,
-          media: formData.media || [] // 添加媒体文件信息
+          media: formData.media || [], // 添加媒体文件信息,
+          照片: formData.照片 || [], // 添加照片信息
         };
         
         console.log('准备保存的数据:', saveData);
