@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Alert, ActivityIndicator, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Alert, ActivityIndicator, Image, Platform, ActionSheetIOS } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -90,8 +90,8 @@ const RecordDetail = ({ route, navigation }) => {
   // 文件上传加载状态
   const [isUploading, setIsUploading] = useState(false);
   
-  // 飞书API hook
-  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken, uploadFile} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1);
+  // 飞书API hook（禁用自动初始化，因为只需要功能函数）
+  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken, uploadFile} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1, { autoInitialize: false });
   
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -229,9 +229,8 @@ const RecordDetail = ({ route, navigation }) => {
     );
   };
 
-  // 选择图片
-  const pickImage = async () => {
-    console.log('开始选择图片...');
+  // 从相册选择图片
+  const selectFromLibrary = async () => {
     try {
       // 检查是否在 Web 环境
       if (Platform.OS === 'web') {
@@ -239,7 +238,7 @@ const RecordDetail = ({ route, navigation }) => {
         return;
       }
       
-      // 再次确认权限
+      // 请求相册权限
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('权限提示', '需要相册权限才能选择图片');
@@ -248,25 +247,69 @@ const RecordDetail = ({ route, navigation }) => {
       
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-      
         quality: 0.8,
+        allowsMultipleSelection: true, // 支持多选
       });
 
       console.log('图片选择结果:', result);
       
       if (!result.canceled && result.assets.length > 0) {
-        const newMedia = [...mediaFiles, ...result.assets.map(asset => ({
-          uri: asset.uri,
-          type: 'image',
-          fileName: asset.fileName || `image_${Date.now()}.jpg`
-        }))];
-        setMediaFiles(newMedia);
-        setFormData(prev => ({...prev, media: newMedia}));
+        await handleMultipleImageResults(result.assets);
       }
+    } catch (error) {
+      console.error('选择图片失败:', error);
+      Alert.alert('错误', '选择图片失败，请重试');
+      setIsUploading(false);
+    }
+  };
+
+  // 拍照
+  const takePhoto = async () => {
+    try {
+      // 检查是否在 Web 环境
+      if (Platform.OS === 'web') {
+        Alert.alert('提示', '在 Web 浏览器中，拍照功能可能受限');
+        return;
+      }
+      
+      // 请求相机权限
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('权限提示', '需要相机权限才能拍照');
+        return;
+      }
+      
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      console.log('拍照结果:', result);
+      
+      if (!result.canceled && result.assets.length > 0) {
+        await handleImageResult(result.assets[0]);
+      }
+    } catch (error) {
+      console.error('拍照失败:', error);
+      Alert.alert('错误', '拍照失败，请重试');
+      setIsUploading(false);
+    }
+  };
+
+  // 处理单个图片结果（上传等）
+  const handleImageResult = async (asset) => {
+    try {
+      const newMedia = [...mediaFiles, {
+        uri: asset.uri,
+        type: 'image',
+        fileName: asset.fileName || `image_${Date.now()}.jpg`
+      }];
+      setMediaFiles(newMedia);
+      setFormData(prev => ({...prev, media: newMedia}));
       
       // 开始上传，显示加载状态
       setIsUploading(true);
-      const uploadResult = await uploadFile(result.assets[0].uri, result.assets[0].fileName || `image_${Date.now()}.jpg`);
+      const uploadResult = await uploadFile(asset.uri, asset.fileName || `image_${Date.now()}.jpg`);
       
       if (uploadResult.success && uploadResult.file_token) {
         console.log('文件上传成功，file_token:', uploadResult.file_token);
@@ -277,13 +320,110 @@ const RecordDetail = ({ route, navigation }) => {
         console.error('文件上传失败:', uploadResult.error);
         Alert.alert('上传失败', '图片上传失败，请重试');
       }
-      
     } catch (error) {
-      console.error('选择图片失败:', error);
-      Alert.alert('错误', '选择图片失败，请重试');
+      console.error('处理图片失败:', error);
+      Alert.alert('错误', '处理图片失败，请重试');
     } finally {
       // 无论成功失败，都隐藏加载状态
       setIsUploading(false);
+    }
+  };
+
+  // 处理多个图片结果（上传等）
+  const handleMultipleImageResults = async (assets) => {
+    try {
+      // 开始上传，显示加载状态
+      setIsUploading(true);
+      
+      // 添加所有图片到媒体列表
+      const timestamp = Date.now();
+      const newMediaItems = assets.map((asset, index) => ({
+        uri: asset.uri,
+        type: 'image',
+        fileName: asset.fileName || `image_${timestamp}_${index}.jpg`
+      }));
+      
+      const newMedia = [...mediaFiles, ...newMediaItems];
+      setMediaFiles(newMedia);
+      setFormData(prev => ({...prev, media: newMedia}));
+      
+      // 逐个上传图片
+      const uploadPromises = assets.map(async (asset, index) => {
+        const fileName = asset.fileName || `image_${timestamp}_${index}.jpg`;
+        const uploadResult = await uploadFile(asset.uri, fileName);
+        
+        if (uploadResult.success && uploadResult.file_token) {
+          console.log(`文件 ${index + 1}/${assets.length} 上传成功，file_token:`, uploadResult.file_token);
+          return uploadResult.file_token;
+        } else {
+          console.error(`文件 ${index + 1}/${assets.length} 上传失败:`, uploadResult.error);
+          return null;
+        }
+      });
+      
+      // 等待所有上传完成
+      const fileTokens = await Promise.all(uploadPromises);
+      
+      // 过滤掉失败的上传（null值）
+      const successfulTokens = fileTokens.filter(token => token !== null);
+      
+      if (successfulTokens.length > 0) {
+        // 更新表单数据，添加所有成功上传的文件token
+        setFormData(prev => ({
+          ...prev,
+          照片: [...prev.照片, ...successfulTokens.map(token => ({ file_token: token }))]
+        }));
+        
+        if (successfulTokens.length < assets.length) {
+          Alert.alert('部分上传失败', `${successfulTokens.length}/${assets.length} 张图片上传成功`);
+        }
+      } else {
+        Alert.alert('上传失败', '所有图片上传失败，请重试');
+      }
+    } catch (error) {
+      console.error('处理图片失败:', error);
+      Alert.alert('错误', '处理图片失败，请重试');
+    } finally {
+      // 无论成功失败，都隐藏加载状态
+      setIsUploading(false);
+    }
+  };
+
+  // 选择图片（显示选择框）
+  const pickImage = () => {
+    // 检查是否在 Web 环境
+    if (Platform.OS === 'web') {
+      Alert.alert('提示', '在 Web 浏览器中，图片选择功能可能受限');
+      return;
+    }
+
+    // iOS 使用 ActionSheetIOS
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['取消', '拍照', '从相册选择'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) {
+            takePhoto();
+          } else if (buttonIndex === 2) {
+            selectFromLibrary();
+          }
+        }
+      );
+    } else {
+      // Android 使用 Alert
+      Alert.alert(
+        '选择图片',
+        '请选择图片来源',
+        [
+          { text: '取消', style: 'cancel' },
+          { text: '拍照', onPress: takePhoto },
+          { text: '从相册选择', onPress: selectFromLibrary },
+        ],
+        { cancelable: true }
+      );
     }
   };
 

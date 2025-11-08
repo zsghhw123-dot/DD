@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 // 提取表情符号的函数
 const extractEmojis = (text) => {
@@ -89,12 +89,14 @@ const convertToActivityData = (records, categories = []) => {
   return newActivityData;
 };
 
-export const useFeishuApi = (currentYear, currentMonth) => {
+export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
+  const { autoInitialize = true } = options;
   const [accessToken, setAccessToken] = useState(null);
   const [activityData, setActivityData] = useState({});
   const [dataCache, setDataCache] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const isInitialized = useRef(false);
 
   // 获取单个月份的Bitable记录数据
   const getBitableRecords = async (token, year, month, categoriesList = []) => {
@@ -303,20 +305,57 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
   // 页面加载时获取token
   useEffect(() => {
+    // 如果禁用了自动初始化，只获取基本的 token 和 categories
+    if (!autoInitialize) {
+      // 但仍然需要获取 token 和 categories（如果还没有的话）
+      const initializeBasicData = async () => {
+        if (!accessToken) {
+          const token = await getTenantAccessToken();
+          if (token && categories.length === 0) {
+            await fetchCategories(token);
+          }
+        }
+      };
+      initializeBasicData();
+      return;
+    }
+
+    // 确保只初始化一次
+    if (isInitialized.current) {
+      return;
+    }
+
+    // 确保 currentYear 和 currentMonth 有有效值
+    if (!currentYear || !currentMonth) {
+      console.warn('useFeishuApi: currentYear 或 currentMonth 无效，等待有效值...');
+      return;
+    }
+
     const initializeData = async () => {
-      const token = await getTenantAccessToken();
-      if (token) {
-        // 获取分类数据
-        const categoriesResult = await fetchCategories(token);
-        const categoriesList = categoriesResult?.data || [];
-        // 获取当前月及前后3个月的数据（共7个月）
-        const months = getMonthRange(currentYear, currentMonth, 3);
-        console.log('准备获取的月份:', months);
-        await fetchMultipleMonths(token, months, categoriesList);
+      try {
+        console.log('useFeishuApi: 开始初始化，年月:', currentYear, currentMonth);
+        isInitialized.current = true;
+        
+        const token = await getTenantAccessToken();
+        if (token) {
+          // 获取分类数据
+          const categoriesResult = await fetchCategories(token);
+          const categoriesList = categoriesResult?.data || [];
+          // 获取当前月及前后3个月的数据（共7个月）
+          const months = getMonthRange(currentYear, currentMonth, 3);
+          console.log('准备获取的月份:', months);
+          await fetchMultipleMonths(token, months, categoriesList);
+        }
+      } catch (error) {
+        console.error('useFeishuApi: 初始化失败:', error);
+        // 如果初始化失败，重置标志以便重试
+        isInitialized.current = false;
       }
     };
+    
     initializeData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoInitialize]);
 
   // 创建新记录的函数
   const createRecord = async (formData) => {
