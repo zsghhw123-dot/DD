@@ -378,11 +378,13 @@ const styles = StyleSheet.create({
     borderColor: '#a8e6cf',
   },
   withPhotos: {
-    shadowColor: '#ff6b6b',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    borderWidth: 2,
+    borderColor: colors.primary[500],
+    shadowColor: colors.primary[500],
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   recordIndicator: {
     width: 6,

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试深度链接</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, sans-serif; padding: 20px; }
+        .test-link { display: block; margin: 10px 0; padding: 15px; background: #007AFF; color: white; text-decoration: none; border-radius: 10px; text-align: center; }
+        .test-link:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <h2>测试苹果快捷指令深度链接</h2>
+    
+    <a href="recordapp://create?title=测试记录&description=这是一个测试描述&amount=100&category=测试分类" class="test-link">
+        测试完整记录
+    </a>
+    
+    <a href="recordapp://create?title=简单测试" class="test-link">
+        测试简单记录
+    </a>
+    
+    <a href="recordapp://create?title=午餐费用&amount=25.5&category=餐饮" class="test-link">
+        测试餐饮记录
+    </a>
+    
+    <p>在iPhone上点击这些链接，系统会询问是否在应用中打开。</p>
+</body>
+</html>

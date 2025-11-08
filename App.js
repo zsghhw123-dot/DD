@@ -1,8 +1,9 @@
 import React, { useState , useEffect} from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
+import * as Linking from 'expo-linking';
 
 // 导入自定义hooks
 import { useFeishuApi } from './src/hooks/useFeishuApi';
@@ -67,6 +68,65 @@ export default function App({ navigation }) {
       setSelectedDateData(dayActivities);
     }
   }, [activityData, selectedDate]);
+
+  // 处理来自快捷指令的深度链接
+  useEffect(() => {
+    const handleDeepLink = ({ url }) => {
+      console.log('收到深度链接:', url);
+      
+      // 解析URL参数
+      const parsedUrl = Linking.parse(url);
+      const { queryParams } = parsedUrl;
+      
+      if (queryParams) {
+        // 处理快捷指令发送的数据
+        const { title, description, amount, category } = queryParams;
+        
+        if (title) {
+          // 显示确认对话框
+          Alert.alert(
+            '快捷指令数据',
+            `标题: ${title}\n描述: ${description || '无'}\n金额: ${amount || '0'}\n分类: ${category || '未指定'}`,
+            [
+              { text: '取消', style: 'cancel' },
+              { 
+                text: '创建记录', 
+                onPress: () => {
+                  // 导航到创建记录页面，传递数据
+                  navigation?.navigate('RecordDetail', {
+                    selectedDate: selectedDate,
+                    smartDateTime: getSmartDateTime(selectedDate),
+                    refreshCurrentMonthData: () => refreshCurrentMonthData(selectedDate),
+                    quickActionData: {
+                      title: title,
+                      description: description,
+                      amount: amount,
+                      category: category
+                    }
+                  });
+                }
+              }
+            ]
+          );
+        }
+      }
+    };
+
+    // 添加链接监听器
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    // 检查应用是否通过链接启动
+    Linking.getInitialURL().then(url => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    // 清理监听器
+    return () => {
+      subscription.remove();
+    };
+  }, [navigation, selectedDate]);
 
   // 处理记录点击
   const handleRecordPress = (record) => {

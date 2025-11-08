@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { colors } from '../../theme/colors';
 
 const RecordItem = ({ icon, title, description, amount, onPress, fields = {} }) => {
   return (
@@ -64,11 +65,8 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
   },
   withPhotos: {
-    shadowColor: '#ff6b6b',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    borderWidth: 2,
+    borderColor: colors.primary[500],
   },
 });
 
