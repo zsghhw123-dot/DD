@@ -6,7 +6,7 @@ import { theme, colors, typography, typographyUtils } from '../../theme';
 import RightIcon from '../../../assets/icons/right.svg';
 import LeftIcon from '../../../assets/icons/left.svg';
 
-const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
+const Calendar = ({ onDateChange, onDateSelect, activityData = {}, categories = [] }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
   // 初始化时通知父组件当前年月

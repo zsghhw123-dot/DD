@@ -33,7 +33,8 @@ export default function App({ navigation }) {
     handleDateChange: handleFeishuDateChange,
     refreshCurrentMonthData,
     dataCache,
-    getMonthKey
+    getMonthKey,
+    categories
   } = useFeishuApi(currentYear, currentMonth);
 
 
@@ -165,6 +166,7 @@ export default function App({ navigation }) {
             onDateChange={handleDateChange}
             onDateSelect={handleDateSelect}
             activityData={activityData}
+            categories={categories}
           />
 
           <View style={styles.recordsContainer}>

@@ -27,18 +27,22 @@ const getMonthRange = (centerYear, centerMonth, n = 3) => {
 };
 
 // 将飞书API数据转换为activityData格式
-const convertToActivityData = (records) => {
+const convertToActivityData = (records, categories = []) => {
   const newActivityData = {};
 
   if (!records || !Array.isArray(records)) {
     return newActivityData;
   }
 
+  const hiddenEmojis = categories.filter(category => category.isShow === '否').map(category => category.icon);
+  console.log("hiddenEmojis:", hiddenEmojis, "categories:", categories);
+
   records.forEach(record => {
     // 获取日期（几号）
     const day = record.fields.日?.value?.[0];
     // 获取类别
     const category = record.fields.类别;
+    
 
     if (day && category) {
       // 提取类别中的表情符号
@@ -50,7 +54,9 @@ const convertToActivityData = (records) => {
           newActivityData[day] = { icon: [], activities: [] };
         }
 
-        const hiddenEmojis = ["🍚", "🥛"];
+        
+
+        
         // 将表情符号添加到对应日期，避免重复
         emojis.forEach(emoji => {
           if (!newActivityData[day].icon.includes(emoji)) {
@@ -91,7 +97,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
   const [categories, setCategories] = useState([]);
 
   // 获取单个月份的Bitable记录数据
-  const getBitableRecords = async (token, year, month) => {
+  const getBitableRecords = async (token, year, month, categoriesList = []) => {
     try {
       const response = await fetch('https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/search', {
         method: 'POST',
@@ -128,7 +134,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
         console.log(`${year}年${month}月 Bitable数据:`, recordsData);
 
         if (recordsData.data && recordsData.data.items) {
-          const convertedData = convertToActivityData(recordsData.data.items);
+          const convertedData = convertToActivityData(recordsData.data.items, categoriesList);
           console.log(`${year}年${month}月 转换后数据:`, convertedData)
           return convertedData;
         }
@@ -142,7 +148,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
   };
 
   // 批量获取多个月份的数据
-  const fetchMultipleMonths = async (token, months) => {
+  const fetchMultipleMonths = async (token, months, categoriesList = []) => {
     setIsLoading(true);
     const newCache = { ...dataCache };
 
@@ -155,8 +161,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
         if (newCache[monthKey]) {
           return { monthKey, data: newCache[monthKey] };
         }
-
-        const data = await getBitableRecords(token, year, month);
+        const data = await getBitableRecords(token, year, month, categoriesList);
         return { monthKey, data };
       });
 
@@ -184,6 +189,10 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
   // 获取分类数据
   const fetchCategories = async (token) => {
+    if (!token) {
+      console.error('没有访问令牌，无法获取分类数据');
+      return;
+    }
     try {
       console.log('开始获取分类数据...');
 
@@ -210,7 +219,8 @@ export const useFeishuApi = (currentYear, currentMonth) => {
           id: item.fields.id?.[0]?.text || '',
           icon: item.fields.icon?.[0]?.text || '',
           name: item.fields.活动类别?.[0]?.text || '',
-          record_id: item.record_id
+          record_id: item.record_id,
+          isShow: item.fields.是否展示 || '是'
         }));
 
         console.log('转换后的分类数据:', formattedCategories);
@@ -249,20 +259,15 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       if (data.tenant_access_token) {
         console.log('tenant_access_token:', data.tenant_access_token);
         setAccessToken(data.tenant_access_token);
-
-        // 获取分类数据
-        await fetchCategories(data.tenant_access_token);
-
-        // 获取当前月及前后3个月的数据（共7个月）
-        const months = getMonthRange(currentYear, currentMonth, 3);
-        console.log('准备获取的月份:', months);
-        await fetchMultipleMonths(data.tenant_access_token, months);
+        return data.tenant_access_token;
       } else {
         console.log('获取tenant_access_token失败:', data);
+        return null;
       }
     } catch (error) {
       console.error('请求飞书API失败:', error);
       console.log('提示：如果是CORS错误，请在移动端或使用代理服务器');
+      return null;
     }
   };
 
@@ -276,7 +281,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
     if (missingMonths.length > 0) {
       console.log('需要预加载的月份:', missingMonths);
-      await fetchMultipleMonths(accessToken, missingMonths);
+      await fetchMultipleMonths(accessToken, missingMonths, categories);
     }
   };
 
@@ -298,7 +303,19 @@ export const useFeishuApi = (currentYear, currentMonth) => {
 
   // 页面加载时获取token
   useEffect(() => {
-    getTenantAccessToken();
+    const initializeData = async () => {
+      const token = await getTenantAccessToken();
+      if (token) {
+        // 获取分类数据
+        const categoriesResult = await fetchCategories(token);
+        const categoriesList = categoriesResult?.data || [];
+        // 获取当前月及前后3个月的数据（共7个月）
+        const months = getMonthRange(currentYear, currentMonth, 3);
+        console.log('准备获取的月份:', months);
+        await fetchMultipleMonths(token, months, categoriesList);
+      }
+    };
+    initializeData();
   }, []);
 
   // 创建新记录的函数
@@ -435,7 +452,7 @@ export const useFeishuApi = (currentYear, currentMonth) => {
       setIsLoading(true);
 
       // 重新获取目标月份的数据
-      const data = await getBitableRecords(accessToken, targetYear, targetMonth);
+      const data = await getBitableRecords(accessToken, targetYear, targetMonth, categories);
 
       // 更新缓存
       const monthKey = getMonthKey(targetYear, targetMonth);
