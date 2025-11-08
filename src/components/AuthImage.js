@@ -90,6 +90,10 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
   const lastTranslate = useRef({ x: 0, y: 0 });
   const lastTap = useRef(0);
   const lastDistance = useRef(null);
+  const closeTimer = useRef(null);
+  const touchStartTime = useRef(0);
+  const touchStartPosition = useRef({ x: 0, y: 0 });
+  const shouldBlockPress = useRef(false);
 
   const panResponder = useRef(
     PanResponder.create({
@@ -121,6 +125,11 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
   };
 
   const handleClosePreview = () => {
+    // 清除关闭定时器
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
     setShowPreview(false);
     // 重置缩放和位置
     scale.setValue(1);
@@ -132,13 +141,21 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
 
   // 处理预览容器上的触摸事件
   const handlePreviewTouch = (e) => {
-    const { touches } = e.nativeEvent;
+    const { touches, changedTouches } = e.nativeEvent;
+    const activeTouches = touches.length > 0 ? touches : changedTouches;
     
-    if (touches.length === 2) {
+    if (activeTouches.length === 2) {
+      // 阻止 onPress 触发
+      shouldBlockPress.current = true;
+      // 清除关闭定时器
+      if (closeTimer.current) {
+        clearTimeout(closeTimer.current);
+        closeTimer.current = null;
+      }
       setIsZooming(true);
       // 双指缩放
-      const touch1 = touches[0];
-      const touch2 = touches[1];
+      const touch1 = activeTouches[0];
+      const touch2 = activeTouches[1];
       
       const dx = touch1.pageX - touch2.pageX;
       const dy = touch1.pageY - touch2.pageY;
@@ -155,19 +172,68 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
         lastScale.current = boundedScale;
         lastDistance.current = distance;
       }
-    } else if (touches.length === 1 && e.type === 'touchend') {
-      lastDistance.current = null;
-      setIsZooming(false);
-      
-      // 双击检测 - 只在触摸结束时检测
-      const now = Date.now();
-      if (now - lastTap.current < 300) {
-        handleDoubleTap();
+    } else if (activeTouches.length === 1) {
+      if (e.type === 'touchstart') {
+        // 记录触摸开始时间和位置
+        touchStartTime.current = Date.now();
+        touchStartPosition.current = {
+          x: activeTouches[0].pageX,
+          y: activeTouches[0].pageY
+        };
+        shouldBlockPress.current = false;
+      } else if (e.type === 'touchend') {
+        lastDistance.current = null;
+        setIsZooming(false);
+        
+        // 检查是否是移动（移动超过10px不算点击）
+        const touch = activeTouches[0];
+        const moveDistance = Math.sqrt(
+          Math.pow(touch.pageX - touchStartPosition.current.x, 2) +
+          Math.pow(touch.pageY - touchStartPosition.current.y, 2)
+        );
+        
+        // 如果移动距离很小，认为是点击
+        if (moveDistance < 10) {
+          // 双击检测
+          const now = Date.now();
+          if (now - lastTap.current < 300) {
+            // 阻止 onPress 触发
+            shouldBlockPress.current = true;
+            // 清除关闭定时器
+            if (closeTimer.current) {
+              clearTimeout(closeTimer.current);
+              closeTimer.current = null;
+            }
+            handleDoubleTap();
+            lastTap.current = 0; // 重置，避免触发关闭
+            // 延迟重置标志，确保 onPress 不会触发
+            setTimeout(() => {
+              shouldBlockPress.current = false;
+            }, 100);
+          } else {
+            // 单点轻触：如果不是缩放状态，则延迟关闭预览（等待可能的双击）
+            if (lastScale.current === 1) {
+              // 清除之前的定时器
+              if (closeTimer.current) {
+                clearTimeout(closeTimer.current);
+              }
+              // 延迟200ms执行关闭，如果在这期间有双击，定时器会被清除
+              closeTimer.current = setTimeout(() => {
+                handleClosePreview();
+                closeTimer.current = null;
+              }, 200);
+            }
+            lastTap.current = now;
+          }
+        } else {
+          // 如果移动了，阻止 onPress
+          shouldBlockPress.current = true;
+        }
       }
-      lastTap.current = now;
     } else {
       lastDistance.current = null;
       setIsZooming(false);
+      shouldBlockPress.current = false;
     }
   };
 
@@ -210,16 +276,8 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
         onRequestClose={handleClosePreview}
       >
         <View style={styles.modalOverlay}>
-          {/* 关闭按钮 */}
-          <TouchableOpacity 
-            style={styles.closeButton}
-            onPress={handleClosePreview}
-          >
-            <Text style={styles.closeButtonText}>×</Text>
-          </TouchableOpacity>
-          
           <View 
-            style={styles.previewContainer} 
+            style={styles.previewContainer}
             {...panResponder.panHandlers}
             onTouchStart={handlePreviewTouch}
             onTouchEnd={(e) => { 
@@ -228,20 +286,33 @@ const AuthImage = ({ uri, accessToken, style, onPress, ...props }) => {
               handlePreviewTouch(e);
             }}
           >
-            <Animated.Image
-              source={{ uri: imageUri || uri }}
-              style={[
-                styles.previewImage,
-                {
-                  transform: [
-                    { scale: scale },
-                    { translateX: translateX },
-                    { translateY: translateY }
-                  ]
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={() => {
+                // 如果未缩放且没有被阻止，则关闭预览
+                if (!shouldBlockPress.current && lastScale.current === 1 && !isZooming) {
+                  handleClosePreview();
                 }
-              ]}
-              resizeMode="contain"
-            />
+                // 重置标志
+                shouldBlockPress.current = false;
+              }}
+              style={styles.imageTouchable}
+            >
+              <Animated.Image
+                source={{ uri: imageUri || uri }}
+                style={[
+                  styles.previewImage,
+                  {
+                    transform: [
+                      { scale: scale },
+                      { translateX: translateX },
+                      { translateY: translateY }
+                    ]
+                  }
+                ]}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -265,22 +336,11 @@ const styles = StyleSheet.create({
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
   },
-  closeButton: {
-    position: 'absolute',
-    top: 50,
-    right: 20,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  imageTouchable: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 1000,
-  },
-  closeButtonText: {
-    color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
   },
 });
 

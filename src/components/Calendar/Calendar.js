@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, PanResponder } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 // 导入主题系统
 import { theme, colors, typography, typographyUtils } from '../../theme';
 import RightIcon from '../../../assets/icons/right.svg';
@@ -14,18 +15,18 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       onDateChange(currentDate.getFullYear(), currentDate.getMonth() + 1);
     }
   }, []);
-  
+
 
   // 获取当前月份的天数
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
-  
+
   // 获取当前月份的第一天是星期几
   const getFirstDayOfMonth = (year, month) => {
     return new Date(year, month, 1).getDay();
   };
-  
+
   // 生成日历数据
   const generateCalendarDays = () => {
     const year = currentDate.getFullYear();
@@ -33,9 +34,9 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     const daysInMonth = getDaysInMonth(year, month);
     //获取1号是星期几，如果返回的是3那么1号则为星期三
     const firstDayOfMonth = getFirstDayOfMonth(year, month);
-    
+
     const days = [];
-    
+
     // 添加上个月的剩余天数以填充第一行
     const prevMonthDays = getDaysInMonth(year, month - 1);
     for (let i = 0; i < firstDayOfMonth; i++) {
@@ -45,11 +46,11 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
         date: new Date(year, month - 1, prevMonthDays - firstDayOfMonth + i + 1)
       });
     }
-    
+
     // 添加当前月的天数
     for (let i = 1; i <= daysInMonth; i++) {
       // const hasActivity = activityData[i] && activityData[i].length > 0;
- 
+
       const hasActivity = activityData[i]?.activities && activityData[i].activities.length > 0
       days.push({
         day: i,
@@ -59,11 +60,11 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
         activities: activityData[i] || []
       });
     }
-    
+
     // 计算需要添加的下个月天数，确保总数是7的倍数
     const totalDaysShown = days.length;
     const remainingDays = 7 - (totalDaysShown % 7);
-    
+
     // 只有当需要填充最后一行时才添加下个月的日期
     if (remainingDays < 7) {
       for (let i = 1; i <= remainingDays; i++) {
@@ -77,12 +78,12 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     console.log('生成的日历数据:', days);
     return days;
   };
-  
+
   // 切换到上个月
   const goToPreviousMonth = () => {
     const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
     setCurrentDate(newDate);
-    
+
     // 通知父组件年月变化
     if (onDateChange) {
       onDateChange(newDate.getFullYear(), newDate.getMonth() + 1);
@@ -93,7 +94,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
   const goToNextMonth = () => {
     const newDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
     setCurrentDate(newDate);
-    
+
     // 通知父组件年月变化
     if (onDateChange) {
       onDateChange(newDate.getFullYear(), newDate.getMonth() + 1);
@@ -116,7 +117,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       // 手势结束时的处理
       const { dx } = gestureState;
       const threshold = 50; // 滑动阈值
-      
+
       if (Math.abs(dx) > threshold) {
         if (dx > 0) {
           // 向右滑动 - 切换到上个月
@@ -128,11 +129,11 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       }
     },
   });
-  
+
   // 选择日期
   const selectDate = (date) => {
     setSelectedDate(date);
-    
+
     // 通知父组件日期选择，并传递该日期的活动数据
     if (onDateSelect) {
       const day = date.getDate();
@@ -141,8 +142,8 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
     }
   };
 
-  
-  
+
+
   // 判断日期是否是今天
   const isToday = (date) => {
     const today = new Date();
@@ -150,18 +151,18 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       date.getMonth() === today.getMonth() &&
       date.getFullYear() === today.getFullYear();
   };
-  
+
   // 判断日期是否被选中
   const isSelected = (date) => {
     return date.getDate() === selectedDate.getDate() &&
       date.getMonth() === selectedDate.getMonth() &&
       date.getFullYear() === selectedDate.getFullYear();
   };
-  
+
   // 渲染日历头部
   const renderHeader = () => {
     const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-    
+
     return (
       <View style={styles.header}>
         <TouchableOpacity onPress={goToPreviousMonth}>
@@ -174,11 +175,11 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       </View>
     );
   };
-  
+
   // 渲染星期标题
   const renderWeekDays = () => {
     const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
-    
+
     return (
       <View style={styles.weekDaysContainer}>
         {weekDays.map((day, index) => (
@@ -187,7 +188,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       </View>
     );
   };
-  
+
   // 渲染日历天数
   const renderDays = () => {
     const days = generateCalendarDays();
@@ -204,31 +205,26 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
             {row.map((item, index) => {
               // 确定背景样式
               let dayContainerStyle = [styles.dayContainer];
-              
+
               if (!item.isCurrentMonth) {
                 // 上个月的日期 - 保持原样（灰色背景）
                 dayContainerStyle.push(styles.otherMonth);
               } else if (item.hasActivity) {
                 // 当月有活动的日期 - 绿色背景
                 dayContainerStyle.push(styles.currentMonthWithActivity);
-                
-                // 检查是否有包含照片的活动
-                const hasPhotos = item.activities.activities.some(activity => 
-                  activity.fields?.照片 && activity.fields.照片.length > 0
-                );
-                
-                // 当有照片时，添加朦胧效果样式
-                if (hasPhotos) {
-                  dayContainerStyle.push(styles.withPhotos);
-                }
               } else {
                 // 当月无活动的日期 - 无背景
                 dayContainerStyle.push(styles.currentMonth);
               }
-              
+
               // 添加选中和今天的样式
               if (isSelected(item.date)) dayContainerStyle.push(styles.selectedDay);
               if (isToday(item.date)) dayContainerStyle.push(styles.today);
+
+              // 检查是否有包含照片的活动
+              const hasPhotos = item.isCurrentMonth && item.hasActivity && item.activities.activities?.some(activity =>
+                activity.fields?.照片 && activity.fields.照片.length > 0
+              );
 
               return (
                 <TouchableOpacity
@@ -237,30 +233,66 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
                   onPress={() => item.isCurrentMonth && selectDate(item.date)}
                   activeOpacity={item.isCurrentMonth ? 0.7 : 1}
                 >
-                  <View style={dayContainerStyle}>
-                    <Text
-                      style={[
-                        styles.dayText,
-                        !item.isCurrentMonth && styles.otherMonthText,
-                        isSelected(item.date) && styles.selectedDayText
-                      ]}
-                    >
-                      {item.day}
-                    </Text>
+                  {hasPhotos ? (
+                    <View style={{position: 'relative', justifyContent: 'center', alignItems: 'center'}}>
+                      <LinearGradient
+                        colors={['#00D4FF', '#00FF88']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.gradientBorder}
+                      >
+                        <View style={[dayContainerStyle, styles.dayContainerInGradient]}>
+                          <Text
+                            style={[
+                              styles.dayText,
+                              !item.isCurrentMonth && styles.otherMonthText,
+                              isSelected(item.date) && styles.selectedDayText
+                            ]}
+                          >
+                            {item.day}
+                          </Text>
 
-                    {/* 显示活动图标 */}
-                  {item.isCurrentMonth && item.hasActivity && item.activities.icon?.length > 0 && (
-                    <View style={styles.activityContainer}>
-                      {item.activities.icon.slice(0, 3).map((icon, iconIndex) => (
-                        <Text key={iconIndex} style={styles.activityIcon}>
-                          {icon}
-                        </Text>
-                      ))}
+
+                        </View>
+
+                      </LinearGradient>
+                      {/* 显示活动图标 */}
+                      {item.isCurrentMonth && item.hasActivity && item.activities.icon?.length > 0 && (
+                        <View style={styles.activityContainer}>
+                          {item.activities.icon.slice(0, 3).map((icon, iconIndex) => (
+                            <Text key={iconIndex} style={styles.activityIcon}>
+                              {icon}
+                            </Text>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+
+
+                  ) : (
+                    <View style={dayContainerStyle}>
+                      <Text
+                        style={[
+                          styles.dayText,
+                          !item.isCurrentMonth && styles.otherMonthText,
+                          isSelected(item.date) && styles.selectedDayText
+                        ]}
+                      >
+                        {item.day}
+                      </Text>
+
+                      {/* 显示活动图标 */}
+                      {item.isCurrentMonth && item.hasActivity && item.activities.icon?.length > 0 && (
+                        <View style={styles.activityContainer}>
+                          {item.activities.icon.slice(0, 3).map((icon, iconIndex) => (
+                            <Text key={iconIndex} style={styles.activityIcon}>
+                              {icon}
+                            </Text>
+                          ))}
+                        </View>
+                      )}
                     </View>
                   )}
-                  </View>
-                  
-                  
                 </TouchableOpacity>
               );
             })}
@@ -269,7 +301,7 @@ const Calendar = ({ onDateChange, onDateSelect, activityData = {} }) => {
       </View>
     );
   };
-  
+
   return (
     <View style={styles.container}>
       {renderHeader()}
@@ -352,6 +384,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     position: 'relative'
   },
+  dayContainerInGradient: {
+    margin: 0,
+    width: 40,
+    height: 40,
+  },
   dayText: {
     ...typographyUtils.getTextStyle('body', colors.app.textPrimary),
   },
@@ -377,14 +414,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#a8e6cf',
   },
+  gradientBorder: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 2,
+  },
   withPhotos: {
-    borderWidth: 2,
-    borderColor: colors.primary[500],
-    shadowColor: colors.primary[500],
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    // 保留此样式以防其他地方使用，但渐变边框通过 LinearGradient 实现
   },
   recordIndicator: {
     width: 6,
@@ -401,7 +440,7 @@ const styles = StyleSheet.create({
     bottom: -5,
     paddingVertical: 2,
     paddingHorizontal: 4,
-    borderRadius:20,
+    borderRadius: 20,
     backgroundColor: '#ffffff',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
