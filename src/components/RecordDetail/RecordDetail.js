@@ -524,6 +524,12 @@ const RecordDetail = ({ route, navigation }) => {
   };
   
   const handleSave = async () => {
+    // 校验是否选择了分类
+    if (!selectedCategory) {
+      Alert.alert('提示', '请先选择类别');
+      return;
+    }
+    
     console.log('保存记录:', formData);
     
     // 设置保存中状态
@@ -748,11 +754,13 @@ const RecordDetail = ({ route, navigation }) => {
         showsVerticalScrollIndicator={false}
         enableOnAndroid={true}
         enableAutomaticScroll={true}
-        keyboardOpeningTime={250}
+        keyboardOpeningTime={0}
         keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
         keyboardShouldPersistTaps="handled"
-        extraScrollHeight={Platform.OS === 'ios' ? 80 : 100}
-        contentContainerStyle={{ paddingBottom: theme.spacing.xl * 5 }}
+        extraScrollHeight={Platform.OS === 'ios' ? 130 : 100}
+        contentContainerStyle={{ paddingBottom: theme.spacing.md }}
+        bounces={false}
+        overScrollMode={Platform.OS === 'android' ? 'never' : undefined}
       >
         {/* 图标区域 */}
         <View style={styles.iconSection}>
@@ -824,77 +832,61 @@ const RecordDetail = ({ route, navigation }) => {
             </View>
           </View>
 
-          {/* 媒体文件 */}
-          <View style={styles.fieldRow}>
-            <View style={styles.fieldIcon}>
-              <Text style={styles.fieldIconText}>📷</Text>
-            </View>
-            <Text style={styles.fieldLabel}>媒体</Text>
-            <View style={styles.fieldValueContainer}>
-              <TouchableOpacity 
-                onPress={pickImage} 
-                disabled={isUploading}
-              >
-                <View style={styles.mediaButtonsContainer}>
-                  {isUploading ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color={colors.primary[500]} />
-                      <Text style={[styles.uploadingText, {marginLeft: 8}]}>上传中...</Text>
-                    </View>
-                  ) : (
-                    <AddIcon style={[{ fontSize: 100, fontWeight: 'bold' }]} />
-                  )}
-                </View>
-              </TouchableOpacity>
-
-            </View>
-          </View>
+          {/* 媒体文件（已整合到下方“媒体与备注”卡片） */}
         </View>
 
         {/* 媒体 + 备注（合并在一块） */}
         {(mediaFiles.length > 0 || true) && (
           <View style={styles.mediaPreviewSection}>
-            <Text style={styles.mediaPreviewTitle}>媒体与备注</Text>
-            {mediaFiles.length > 0 && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
-                {mediaFiles.map((media, index) => (
-                  <View key={index} style={styles.mediaItem}>
-                    {media.type.includes('image') ? (
-                      <AuthImage 
-                        uri={media.uri}
-                        accessToken={accessToken}
-                        style={styles.mediaImage}
-                      />
-                    ) : (
-                      <AuthVideo 
-                        uri={media.uri}
-                        accessToken={accessToken}
-                        style={styles.mediaVideo}
-                      />
-                    )}
-                    <TouchableOpacity 
-                      style={styles.mediaDeleteButton} 
-                      onPress={() => removeMedia(index)}
-                    >
-                      <FalseIcon width={12} height={12} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-
-            {/* 备注输入（多行） */}
+            {/* 将媒体入口与缩略图合并至备注输入容器内 */}
             <View style={styles.notesSection}>
               <Text style={styles.notesLabel}>备注</Text>
-              <TextInput
-                style={styles.notesInput}
-                value={formData.description}
-                onChangeText={(text) => setFormData({...formData, description: text})}
-                placeholder="添加备注"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
+              <View style={styles.notesInputContainer}>
+                
+                <TextInput
+                  style={styles.notesTextInput}
+                  value={formData.description}
+                  onChangeText={(text) => setFormData({...formData, description: text})}
+                  placeholder="添加备注"
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+                <View style={styles.mediaGrid}>
+                  <TouchableOpacity style={styles.mediaTileAdd} onPress={pickImage} disabled={isUploading}>
+                    {isUploading ? (
+                      <ActivityIndicator size="small" color={colors.primary[500]} />
+                    ) : (
+                      <AddIcon width={24} height={24} />
+                    )}
+                  </TouchableOpacity>
+                  {mediaFiles.map((media, index) => (
+                    <View key={index} style={styles.mediaTile}>
+                      {media.type.includes('image') ? (
+                        <AuthImage
+                          uri={media.uri}
+                          accessToken={accessToken}
+                          style={styles.mediaImageTile}
+                        />
+                      ) : (
+                        <AuthVideo
+                          uri={media.uri}
+                          accessToken={accessToken}
+                          style={styles.mediaVideoTile}
+                        />
+                      )}
+                      <TouchableOpacity
+                        style={styles.mediaDeleteButton}
+                        onPress={() => removeMedia(index)}
+                      >
+                        <FalseIcon width={8} height={8} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+
+                
+              </View>
             </View>
           </View>
         )}
@@ -1045,8 +1037,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.md,
-    paddingTop: theme.spacing.xl,
-    paddingBottom: theme.spacing.md,
+    paddingTop: theme.spacing.md,
+    paddingBottom: 0,
     backgroundColor: colors.app.background,
     marginTop: theme.spacing.xl,
   },
@@ -1225,7 +1217,8 @@ const styles = StyleSheet.create({
   mediaPreviewSection: {
     backgroundColor: colors.app.surface,
     borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
     marginBottom: theme.spacing.xl,
     ...theme.shadows.sm,
   },
@@ -1236,7 +1229,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.app.textPrimary,
-    marginBottom: theme.spacing.xs,
+    marginBottom: theme.spacing.md,
   },
   notesInput: {
     minHeight: 100,
@@ -1247,6 +1240,49 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.app.textSecondary,
     backgroundColor: colors.app.surfaceAlt,
+  },
+  // 新的备注容器，包含媒体横向列表与文本输入
+  notesInputContainer: {
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: colors.app.surfaceAlt,
+    padding: theme.spacing.md,
+  },
+  // 备注文本输入（容器内，无边框）
+  notesTextInput: {
+    minHeight: 100,
+    fontSize: 16,
+    color: colors.app.textSecondary,
+    paddingTop: theme.spacing.sm,
+  },
+  addMediaInlineContainer: {
+    display: 'none',
+  },
+  addMediaButtonSmall: {
+    display: 'none',
+  },
+  inlineMediaRow: {
+    marginTop: theme.spacing.sm,
+    alignItems: 'center',
+  },
+  mediaItemSmall: {
+    marginRight: theme.spacing.sm,
+    position: 'relative',
+  },
+  mediaImageSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: colors.neutral[100],
+  },
+  mediaVideoSmall: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: colors.neutral[100],
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   mediaPreviewTitle: {
     fontSize: 16,
@@ -1288,8 +1324,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    width: 18,
-    height: 18,
+    width: 15,
+    height: 15,
     borderRadius: 12,
     backgroundColor: colors.app.error,
     justifyContent: 'center',
@@ -1426,8 +1462,39 @@ const styles = StyleSheet.create({
     color: colors.app.textSecondary,
     fontWeight: '600',
   },
-
-  
+  mediaGrid: {
+    marginTop: theme.spacing.sm,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.sm,
+  },
+  mediaTileAdd: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: colors.app.buttonPressed,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+  },
+  mediaTile: {
+    width: 56,
+    height: 56,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: colors.neutral[100],
+    position: 'relative',
+  },
+  mediaImageTile: {
+    width: '100%',
+    height: '100%',
+  },
+  mediaVideoTile: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
 
 export default RecordDetail;
