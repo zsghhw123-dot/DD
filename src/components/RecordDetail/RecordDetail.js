@@ -525,7 +525,7 @@ const RecordDetail = ({ route, navigation }) => {
   
   const handleSave = async () => {
     // 校验是否选择了分类
-    if (!selectedCategory) {
+    if (!formData.icon) {
       Alert.alert('提示', '请先选择类别');
       return;
     }
