@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Modal, Alert, ActivityIndicator, Image, Platform, ActionSheetIOS } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -65,6 +66,9 @@ const RecordDetail = ({ route, navigation }) => {
       file_token: item.file_token
     })) || []
   });
+
+  // 滚动与输入框引用
+  const scrollViewRef = useRef(null);
   
   // 媒体文件状态
   const [mediaFiles, setMediaFiles] = useState(record?.fields?.照片?.map((item) => ({
@@ -92,7 +96,7 @@ const RecordDetail = ({ route, navigation }) => {
   
   // 飞书API hook（禁用自动初始化，因为只需要功能函数）
   const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken, uploadFile} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1, { autoInitialize: false });
-  
+
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(() => {
@@ -738,7 +742,18 @@ const RecordDetail = ({ route, navigation }) => {
         )}
       </View>
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView
+        innerRef={(ref) => { scrollViewRef.current = ref; }}
+        style={styles.content}
+        showsVerticalScrollIndicator={false}
+        enableOnAndroid={true}
+        enableAutomaticScroll={true}
+        keyboardOpeningTime={250}
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        keyboardShouldPersistTaps="handled"
+        extraScrollHeight={Platform.OS === 'ios' ? 80 : 100}
+        contentContainerStyle={{ paddingBottom: theme.spacing.xl * 5 }}
+      >
         {/* 图标区域 */}
         <View style={styles.iconSection}>
           <View style={styles.iconContainer}>
@@ -775,22 +790,7 @@ const RecordDetail = ({ route, navigation }) => {
             </View>
           </View>
 
-          {/* 备注 */}
-          <View style={styles.fieldRow}>
-            <View style={styles.fieldIcon}>
-              <Text style={styles.fieldIconText}>📝</Text>
-            </View>
-            <Text style={styles.fieldLabel}>备注</Text>
-            <View style={styles.fieldValueContainer}>
-              <TextInput
-                style={styles.fieldValue}
-                value={formData.description}
-                onChangeText={(text) => setFormData({...formData, description: text})}
-                placeholder="添加备注"
-              />
-              <Text style={styles.fieldArrow}>›</Text>
-            </View>
-          </View>
+          
 
           {/* 时间 */}
           <TouchableOpacity style={styles.fieldRow} onPress={showDateTimePicker}>
@@ -851,36 +851,51 @@ const RecordDetail = ({ route, navigation }) => {
           </View>
         </View>
 
-        {/* 媒体预览 */}
-        {mediaFiles.length > 0 && (
+        {/* 媒体 + 备注（合并在一块） */}
+        {(mediaFiles.length > 0 || true) && (
           <View style={styles.mediaPreviewSection}>
-            <Text style={styles.mediaPreviewTitle}>已添加的媒体文件</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
-              {mediaFiles.map((media, index) => (
-                <View key={index} style={styles.mediaItem}>
-                  {media.type.includes('image') ? (
-                    <AuthImage 
-                      uri={media.uri}
-                      accessToken={accessToken}
-                      style={styles.mediaImage}
-                    />
-                  ) : (
-                    <AuthVideo 
-                      uri={media.uri}
-                      accessToken={accessToken}
-                      style={styles.mediaVideo}
-                    />
-                  )}
-                  <TouchableOpacity 
-                    style={styles.mediaDeleteButton} 
-                    onPress={() => removeMedia(index)}
-                  >
-                    {/* <Text style={styles.mediaDeleteText}>×</Text> */}
-                    <FalseIcon width={12} height={12} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </ScrollView>
+            <Text style={styles.mediaPreviewTitle}>媒体与备注</Text>
+            {mediaFiles.length > 0 && (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mediaScrollView}>
+                {mediaFiles.map((media, index) => (
+                  <View key={index} style={styles.mediaItem}>
+                    {media.type.includes('image') ? (
+                      <AuthImage 
+                        uri={media.uri}
+                        accessToken={accessToken}
+                        style={styles.mediaImage}
+                      />
+                    ) : (
+                      <AuthVideo 
+                        uri={media.uri}
+                        accessToken={accessToken}
+                        style={styles.mediaVideo}
+                      />
+                    )}
+                    <TouchableOpacity 
+                      style={styles.mediaDeleteButton} 
+                      onPress={() => removeMedia(index)}
+                    >
+                      <FalseIcon width={12} height={12} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+
+            {/* 备注输入（多行） */}
+            <View style={styles.notesSection}>
+              <Text style={styles.notesLabel}>备注</Text>
+              <TextInput
+                style={styles.notesInput}
+                value={formData.description}
+                onChangeText={(text) => setFormData({...formData, description: text})}
+                placeholder="添加备注"
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
           </View>
         )}
 
@@ -899,7 +914,7 @@ const RecordDetail = ({ route, navigation }) => {
             <Text style={styles.saveButtonText}>保存</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
+      </KeyboardAwareScrollView>
       
       {/* 日期时间选择器模态框 */}
       <Modal
@@ -1144,6 +1159,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     paddingVertical: 0,
   },
+  multilineValue: {
+    minHeight: 80,
+    textAlign: 'left',
+    paddingVertical: theme.spacing.xs,
+  },
   amountInput: {
     color: colors.app.error,
     fontWeight: '600',
@@ -1208,6 +1228,25 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
     marginBottom: theme.spacing.xl,
     ...theme.shadows.sm,
+  },
+  notesSection: {
+    marginTop: theme.spacing.md,
+  },
+  notesLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.app.textPrimary,
+    marginBottom: theme.spacing.xs,
+  },
+  notesInput: {
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: theme.borderRadius.sm,
+    padding: theme.spacing.md,
+    fontSize: 16,
+    color: colors.app.textSecondary,
+    backgroundColor: colors.app.surfaceAlt,
   },
   mediaPreviewTitle: {
     fontSize: 16,
