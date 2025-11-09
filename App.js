@@ -1,6 +1,7 @@
 import React, { useState , useEffect} from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
@@ -159,10 +160,10 @@ export default function App({ navigation }) {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.safeArea}>
         <StatusBar style="auto" />
-        <View style={styles.container}>
-          <Calendar
+        <Calendar
             onDateChange={handleDateChange}
             onDateSelect={handleDateSelect}
             activityData={activityData}
@@ -188,7 +189,7 @@ export default function App({ navigation }) {
             </View>
 
             <ScrollView
-              style={styles.recordsList}
+              style={{paddingHorizontal: theme.spacing.md}}
               showsVerticalScrollIndicator={false}
             >
               {selectedDateData.map(record => (
@@ -210,8 +211,9 @@ export default function App({ navigation }) {
             onAddRecord={handleAddRecord}
             onKeyboardPress={handleKeyboardPress}
           />
-        </View>
-      </SafeAreaView>
+        
+        </SafeAreaView>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }
@@ -229,7 +231,7 @@ const styles = StyleSheet.create({
   recordsContainer: {
     marginTop: theme.spacing.sm,
     flex: 1,
-    paddingBottom: 70, // 为语音按钮容器留出空间
+    paddingBottom: 80, // 为语音按钮容器留出空间
   },
   recordsHeader: {
     flexDirection: 'row',
@@ -237,7 +239,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
         marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.sm,
-    marginLeft: theme.spacing.sm,
+    marginLeft: theme.spacing.lg,
+    marginRight: theme.spacing.md,
     marginBottom: theme.spacing.md,
   },
   recordsTitle: {

@@ -315,6 +315,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#f5fcf9',
     borderRadius: 10,
+    marginHorizontal: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4
   },
   weekDay: {
-    ...typographyUtils.getTextStyle('body', colors.app.textTertiary),
+    ...typographyUtils.getTextStyle('bodyMedium', colors.app.textTertiary),
   },
   daysContainer: {
     backgroundColor: '#fff',

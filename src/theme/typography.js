@@ -94,7 +94,6 @@ export const typography = {
       fontSize: 14,
       fontWeight: '400',
     },
-
     // 标签和说明文字
     caption: {
       fontSize: 13,
