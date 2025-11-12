@@ -17,6 +17,7 @@ import VoiceButton from './src/components/VoiceButton';
 // 导入主题系统
 import { theme, colors, typography, typographyUtils } from './src/theme';
 import { getSmartDateTime } from './src/utils/dateUtils';
+import { useSettings } from './src/context/SettingsContext';
 
 export default function App({ navigation }) {
   // 当前显示的年月状态
@@ -40,6 +41,7 @@ export default function App({ navigation }) {
 
 
 
+  const { showVoiceButton } = useSettings();
   // 处理日历年月变化的回调函数
   const handleDateChange = (year, month) => {
     setCurrentYear(year);
@@ -170,7 +172,7 @@ export default function App({ navigation }) {
             categories={categories}
           />
 
-          <View style={styles.recordsContainer}>
+          <View style={[styles.recordsContainer, showVoiceButton ? { paddingBottom: 80 } : null]}>
             
             <View style={styles.recordsHeader}>
               <Text style={styles.recordsTitle}>
@@ -206,11 +208,12 @@ export default function App({ navigation }) {
             </ScrollView>
           </View>
 
-          {/* 语音按钮组件 */}
-          <VoiceButton 
-            onAddRecord={handleAddRecord}
-            onKeyboardPress={handleKeyboardPress}
-          />
+          {showVoiceButton && (
+            <VoiceButton 
+              onAddRecord={handleAddRecord}
+              onKeyboardPress={handleKeyboardPress}
+            />
+          )}
         
         </SafeAreaView>
       </SafeAreaProvider>
@@ -231,7 +234,7 @@ const styles = StyleSheet.create({
   recordsContainer: {
     marginTop: theme.spacing.sm,
     flex: 1,
-    paddingBottom: 80, // 为语音按钮容器留出空间
+    
   },
   recordsHeader: {
     flexDirection: 'row',
