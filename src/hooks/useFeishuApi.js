@@ -189,6 +189,25 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     }
   };
 
+  const ensureAccessToken = async () => {
+    if (accessToken) return accessToken;
+    const token = await getTenantAccessToken();
+    if (token && categories.length === 0) {
+      await fetchCategories(token);
+    }
+    return token;
+  };
+
+  const preloadYearData = async (targetYear) => {
+    const token = await ensureAccessToken();
+    if (!token) {
+      return { success: false };
+    }
+    const months = Array.from({ length: 12 }, (_, i) => ({ year: targetYear, month: i + 1 }));
+    await fetchMultipleMonths(token, months, categories);
+    return { success: true };
+  };
+
   // 获取分类数据
   const fetchCategories = async (token) => {
     if (!token) {
@@ -714,6 +733,7 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     fetchCategories,
     getCategoryById,
     getCategoryByName,
-    getDefaultCategory
+    getDefaultCategory,
+    preloadYearData
   };
 };

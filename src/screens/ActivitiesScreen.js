@@ -13,6 +13,13 @@ const ActivitiesScreen = ({ navigation }) => {
   const monthKey = getMonthKey(year, month);
   const monthData = dataCache[monthKey] || {};
   const hasData = Object.keys(monthData).length > 0;
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  React.useEffect(() => {
+    if (!isLoading && !initialLoadDone) {
+      setInitialLoadDone(true);
+    }
+  }, [isLoading, initialLoadDone]);
 
   const allRecords = useMemo(() => {
     const monthKey = getMonthKey(year, month);
@@ -41,7 +48,7 @@ const ActivitiesScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.title}>全部活动（本月）</Text>
-        {isLoading && !hasData ? (
+        {isLoading && !initialLoadDone ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary[500]} />
             <Text style={styles.loadingText}>正在加载数据…</Text>
@@ -52,7 +59,7 @@ const ActivitiesScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing || (isLoading && hasData)}
+              refreshing={refreshing || (isLoading && initialLoadDone)}
               onRefresh={async () => {
                 setRefreshing(true);
                 try {

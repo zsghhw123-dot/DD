@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Svg, Rect, Text as SvgText } from 'react-native-svg';
+import { Svg, Rect, Text as SvgText, Line, Circle } from 'react-native-svg';
 import { useFeishuApi } from '../hooks/useFeishuApi';
 import { colors, theme, typographyUtils } from '../theme';
 
@@ -10,11 +10,22 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const StatsScreen = () => {
   const [year] = useState(new Date().getFullYear());
   const [month] = useState(new Date().getMonth() + 1);
-  const { dataCache, getMonthKey, isLoading, refreshCurrentMonthData } = useFeishuApi(year, month);
+  const { dataCache, getMonthKey, isLoading, refreshCurrentMonthData, preloadYearData } = useFeishuApi(year, month,{autoInitialize: false});
   const [refreshing, setRefreshing] = useState(false);
   const currentMonthKey = getMonthKey(year, month);
   const currentMonthData = dataCache[currentMonthKey] || {};
   const hasData = Object.keys(currentMonthData).length > 0;
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  React.useEffect(() => {
+    preloadYearData(year);
+  }, [year]);
+
+  React.useEffect(() => {
+    if (!isLoading && !initialLoadDone) {
+      setInitialLoadDone(true);
+    }
+  }, [isLoading, initialLoadDone]);
 
   const parseAmount = (val) => {
     if (val == null) return 0;
@@ -91,9 +102,33 @@ const StatsScreen = () => {
   const barWidth = 32;
   const gap = 20;
 
+  const yearlyData = useMemo(() => {
+    const prefix = `${year}-`;
+    const monthTotals = Array.from({ length: 12 }, () => 0);
+    Object.keys(dataCache).forEach((key) => {
+      if (key.startsWith(prefix)) {
+        const m = Number(key.split('-')[1]);
+        const monthData = dataCache[key] || {};
+        let sum = 0;
+        Object.keys(monthData).forEach((day) => {
+          const acts = monthData[day]?.activities || [];
+          acts.forEach((act) => {
+            sum += parseAmount(act.amount ?? act.fields?.金额);
+          });
+        });
+        monthTotals[m - 1] = sum;
+      }
+    });
+    const points = monthTotals
+      .map((v, idx) => ({ month: idx + 1, value: v }))
+      .filter((p) => p.value > 0);
+    const max = points.length ? Math.max(...points.map((p) => p.value)) : 0;
+    return { points, max };
+  }, [dataCache, year]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      {isLoading && !hasData ? (
+      {isLoading && !initialLoadDone ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary[500]} />
           <Text style={styles.loadingText}>正在加载数据…</Text>
@@ -104,7 +139,7 @@ const StatsScreen = () => {
           contentContainerStyle={styles.content}
           refreshControl={
             <RefreshControl
-              refreshing={refreshing || (isLoading && hasData)}
+              refreshing={refreshing || (isLoading && initialLoadDone)}
               onRefresh={async () => {
                 setRefreshing(true);
                 try {
@@ -150,6 +185,50 @@ const StatsScreen = () => {
                     </SvgText>
                     <SvgText x={x + barWidth / 2} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
                       {item.value}
+                    </SvgText>
+                  </React.Fragment>
+                );
+              })}
+            </Svg>
+          </View>
+        )}
+
+        <Text style={styles.subTitle}>今年月度走势</Text>
+        {yearlyData.points.length === 0 ? (
+          <Text style={styles.hint}>暂无月份数据</Text>
+        ) : (
+          <View style={styles.chartWrapper}>
+            <Svg width={chartWidth} height={chartHeight}>
+              {yearlyData.points.map((p, idx) => {
+                const usableWidth = chartWidth - 40;
+                const step = usableWidth / Math.max(yearlyData.points.length - 1, 1);
+                const x = 20 + idx * step;
+                const y = yearlyData.max ? Math.max(4, chartHeight - 20 - (p.value / yearlyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                if (idx > 0) {
+                  const prev = yearlyData.points[idx - 1];
+                  const prevX = 20 + (idx - 1) * step;
+                  const prevY = yearlyData.max ? Math.max(4, chartHeight - 20 - (prev.value / yearlyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                  return (
+                    <React.Fragment key={`seg-${p.month}`}>
+                      <Line x1={prevX} y1={prevY} x2={x} y2={y} stroke={colors.primary[500] || '#5B8FF9'} strokeWidth={2} />
+                      <Circle cx={x} cy={y} r={4} fill={colors.primary[500] || '#5B8FF9'} />
+                      <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                        {`${p.month}月`}
+                      </SvgText>
+                      <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
+                        {Math.round(p.value)}
+                      </SvgText>
+                    </React.Fragment>
+                  );
+                }
+                return (
+                  <React.Fragment key={`pt-${p.month}`}>
+                    <Circle cx={x} cy={y} r={4} fill={colors.primary[500] || '#5B8FF9'} />
+                    <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                      {`${p.month}月`}
+                    </SvgText>
+                    <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
+                      {Math.round(p.value)}
                     </SvgText>
                   </React.Fragment>
                 );
@@ -219,6 +298,11 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: theme.spacing.md,
     alignItems: 'center',
+  },
+  subTitle: {
+    ...typographyUtils.getTextStyle('h4', colors.app.textPrimary),
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
 });
 
