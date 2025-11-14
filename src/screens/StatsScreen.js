@@ -1,22 +1,23 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, TouchableOpacity, Modal, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Rect, Text as SvgText, Line, Circle } from 'react-native-svg';
 import { useFeishuApi } from '../hooks/useFeishuApi';
-import { colors, theme, typographyUtils } from '../theme';
+import { colors, theme, typographyUtils, colorUtils } from '../theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const StatsScreen = () => {
   const [year] = useState(new Date().getFullYear());
   const [month] = useState(new Date().getMonth() + 1);
-  const { dataCache, getMonthKey, isLoading, refreshCurrentMonthData, preloadYearData, categories } = useFeishuApi(year, month,{autoInitialize: false});
+  const { dataCache, getMonthKey, isLoading, refreshMonthDataForDate, preloadYearData, categories } = useFeishuApi(year, month,{autoInitialize: false});
   const [refreshing, setRefreshing] = useState(false);
   const currentMonthKey = getMonthKey(year, month);
   const currentMonthData = dataCache[currentMonthKey] || {};
   const hasData = Object.keys(currentMonthData).length > 0;
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('全部');
+  const [selectorOpen, setSelectorOpen] = useState(false);
 
   React.useEffect(() => {
     preloadYearData(year);
@@ -103,6 +104,27 @@ const StatsScreen = () => {
   const barWidth = 32;
   const gap = 20;
 
+  const dailyData = useMemo(() => {
+    const monthKey = getMonthKey(year, month);
+    const monthData = dataCache[monthKey] || {};
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === year && (now.getMonth() + 1) === month;
+    const daysLimit = isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
+    const points = [];
+    for (let d = 1; d <= daysLimit; d++) {
+      const acts = monthData[d]?.activities || [];
+      let sum = 0;
+      acts.forEach((act) => {
+        if (selectedCategory === '全部' || act.title.includes(selectedCategory) || selectedCategory.includes(act.title)) {
+          sum += parseAmount(act.amount ?? act.fields?.金额);
+        }
+      });
+      points.push({ day: d, value: sum });
+    }
+    const max = points.length ? Math.max(...points.map((p) => p.value)) : 0;
+    return { points, max };
+  }, [dataCache, year, month, getMonthKey, selectedCategory]);
   const yearlyData = useMemo(() => {
     const prefix = `${year}-`;
     const monthTotals = Array.from({ length: 12 }, () => 0);
@@ -129,6 +151,23 @@ const StatsScreen = () => {
     return { points, max };
   }, [dataCache, year, selectedCategory]);
 
+  const categoryOptions = useMemo(() => {
+    const monthKey = getMonthKey(year, month);
+    const monthData = dataCache[monthKey] || {};
+    const totals = {};
+    Object.keys(monthData).forEach((day) => {
+      const acts = monthData[day]?.activities || [];
+      acts.forEach((act) => {
+        const name = act.title || '未分类';
+        const amt = parseAmount(act.amount ?? act.fields?.金额);
+        totals[name] = (totals[name] || 0) + amt;
+      });
+    });
+    const names = (categories || []).map((c) => c.name);
+    const sorted = names.sort((a, b) => (totals[b] || 0) - (totals[a] || 0));
+    return ['全部', ...sorted];
+  }, [categories, dataCache, year, month, getMonthKey]);
+
   return (
     <SafeAreaView style={styles.safeArea}>
       {isLoading && !initialLoadDone ? (
@@ -146,7 +185,7 @@ const StatsScreen = () => {
               onRefresh={async () => {
                 setRefreshing(true);
                 try {
-                  await refreshCurrentMonthData();
+                  await refreshMonthDataForDate(new Date(year, month - 1, 1));
                 } finally {
                   setRefreshing(false);
                 }
@@ -156,7 +195,30 @@ const StatsScreen = () => {
             />
           }
         >
-        <Text style={styles.title}>本月统计</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>本月统计</Text>
+          <View style={styles.selectorRow}>
+            <TouchableOpacity style={styles.selectorButton} onPress={() => setSelectorOpen(!selectorOpen)} activeOpacity={0.8}>
+              <Text style={styles.selectorButtonText}>{selectedCategory}</Text>
+              <Text style={styles.selectorButtonCaret}>▾</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {selectorOpen && (
+          <Modal transparent animationType="fade" visible={selectorOpen} onRequestClose={() => setSelectorOpen(false)}>
+            <TouchableWithoutFeedback onPress={() => setSelectorOpen(false)}>
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalMenu}>
+                  {categoryOptions.map((name) => (
+                    <TouchableOpacity key={name} style={styles.selectorMenuItem} onPress={() => { setSelectedCategory(name); setSelectorOpen(false); }} activeOpacity={0.8}>
+                      <Text style={[styles.selectorMenuText, selectedCategory === name ? styles.selectorMenuTextActive : null]}>{name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </Modal>
+        )}
         <View style={styles.metricsCard}>
           <View style={styles.metricRow}>
             <Text style={styles.metricLabel}>当月总花费</Text>
@@ -196,14 +258,51 @@ const StatsScreen = () => {
           </View>
         )}
 
+        <Text style={styles.subTitle}>当月每日走势</Text>
+        {dailyData.points.some(p => p.value > 0) ? (
+          <View style={styles.chartWrapper}>
+            <Svg width={chartWidth} height={chartHeight}>
+              {dailyData.points.map((p, idx) => {
+                const usableWidth = chartWidth - 40;
+                const step = usableWidth / Math.max(dailyData.points.length - 1, 1);
+                const x = 20 + idx * step;
+                const y = dailyData.max ? Math.max(4, chartHeight - 20 - (p.value / dailyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                if (idx > 0) {
+                  const prev = dailyData.points[idx - 1];
+                  const prevX = 20 + (idx - 1) * step;
+                  const prevY = dailyData.max ? Math.max(4, chartHeight - 20 - (prev.value / dailyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                  return (
+                    <React.Fragment key={`dseg-${p.day}`}>
+                      <Line x1={prevX} y1={prevY} x2={x} y2={y} stroke={colors.primary[500] || '#5B8FF9'} strokeWidth={2} />
+                      <Circle cx={x} cy={y} r={3} fill={colors.primary[500] || '#5B8FF9'} />
+                      <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                        {`${p.day}日`}
+                      </SvgText>
+                      <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                        {Math.round(p.value)}
+                      </SvgText>
+                    </React.Fragment>
+                  );
+                }
+                return (
+                  <React.Fragment key={`dpt-${p.day}`}>
+                    <Circle cx={x} cy={y} r={3} fill={colors.primary[500] || '#5B8FF9'} />
+                    <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                      {`${p.day}日`}
+                    </SvgText>
+                    <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                      {Math.round(p.value)}
+                    </SvgText>
+                  </React.Fragment>
+                );
+              })}
+            </Svg>
+          </View>
+        ) : (
+          <Text style={styles.hint}>当月暂无数据</Text>
+        )}
+
         <Text style={styles.subTitle}>今年月度走势</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterContent}>
-          {['全部', ...((categories || []).map(c => c.name))].map((name) => (
-            <TouchableOpacity key={name} style={[styles.filterChip, selectedCategory === name ? styles.filterChipActive : null]} onPress={() => setSelectedCategory(name)} activeOpacity={0.8}>
-              <Text style={[styles.filterText, selectedCategory === name ? styles.filterTextActive : null]}>{name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
         {yearlyData.points.length === 0 ? (
           <Text style={styles.hint}>暂无月份数据</Text>
         ) : (
@@ -246,6 +345,7 @@ const StatsScreen = () => {
             </Svg>
           </View>
         )}
+        <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
       )}
     </SafeAreaView>
@@ -261,7 +361,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: theme.spacing.lg,
+    padding: theme.spacing.lg
   },
   title: {
     ...typographyUtils.getTextStyle('h3', colors.app.textPrimary),
@@ -313,6 +413,69 @@ const styles = StyleSheet.create({
     ...typographyUtils.getTextStyle('h4', colors.app.textPrimary),
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  selectorRow: {
+    position: 'relative',
+  },
+  selectorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.app.surface,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+  },
+  selectorButtonText: {
+    ...typographyUtils.getTextStyle('caption', colors.app.textPrimary),
+  },
+  selectorButtonCaret: {
+    ...typographyUtils.getTextStyle('caption', colors.neutral[600]),
+    marginLeft: theme.spacing.xs,
+  },
+  selectorMenu: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    backgroundColor: colors.app.surface,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: theme.borderRadius.lg,
+    marginTop: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    minWidth: 120,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colorUtils.withOpacity(colors.shadow.overlay, 0.2),
+  },
+  modalMenu: {
+    position: 'absolute',
+    top: theme.spacing.lg * 2,
+    right: theme.spacing.lg,
+    backgroundColor: colors.app.surface,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.xs,
+    minWidth: 140,
+    elevation: 6,
+  },
+  selectorMenuItem: {
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  selectorMenuText: {
+    ...typographyUtils.getTextStyle('caption', colors.app.textPrimary),
+  },
+  selectorMenuTextActive: {
+    ...typographyUtils.getTextStyle('caption', colors.primary[700]),
+    fontWeight: '600',
   },
   filterRow: {
     marginBottom: theme.spacing.sm,
