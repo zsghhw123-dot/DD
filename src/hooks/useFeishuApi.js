@@ -208,6 +208,31 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     return { success: true };
   };
 
+  const getMonthsInRange = (startYear, startMonth, endYear, endMonth) => {
+    const result = [];
+    let y = startYear;
+    let m = startMonth;
+    while (y < endYear || (y === endYear && m <= endMonth)) {
+      result.push({ year: y, month: m });
+      m += 1;
+      if (m > 12) {
+        m = 1;
+        y += 1;
+      }
+    }
+    return result;
+  };
+
+  const preloadRange = async (startYear, startMonth, endYear, endMonth) => {
+    const token = await ensureAccessToken();
+    if (!token) {
+      return { success: false };
+    }
+    const months = getMonthsInRange(startYear, startMonth, endYear, endMonth);
+    await fetchMultipleMonths(token, months, categories);
+    return { success: true };
+  };
+
   // 获取分类数据
   const fetchCategories = async (token) => {
     if (!token) {
@@ -734,6 +759,7 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     getCategoryById,
     getCategoryByName,
     getDefaultCategory,
-    preloadYearData
+    preloadYearData,
+    preloadRange
   };
 };
