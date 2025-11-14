@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Dimensions, ActivityIndicator, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Svg, Rect, Text as SvgText, Line, Circle } from 'react-native-svg';
 import { useFeishuApi } from '../hooks/useFeishuApi';
@@ -10,12 +10,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const StatsScreen = () => {
   const [year] = useState(new Date().getFullYear());
   const [month] = useState(new Date().getMonth() + 1);
-  const { dataCache, getMonthKey, isLoading, refreshCurrentMonthData, preloadYearData } = useFeishuApi(year, month,{autoInitialize: false});
+  const { dataCache, getMonthKey, isLoading, refreshCurrentMonthData, preloadYearData, categories } = useFeishuApi(year, month,{autoInitialize: false});
   const [refreshing, setRefreshing] = useState(false);
   const currentMonthKey = getMonthKey(year, month);
   const currentMonthData = dataCache[currentMonthKey] || {};
   const hasData = Object.keys(currentMonthData).length > 0;
   const [initialLoadDone, setInitialLoadDone] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('全部');
 
   React.useEffect(() => {
     preloadYearData(year);
@@ -113,7 +114,9 @@ const StatsScreen = () => {
         Object.keys(monthData).forEach((day) => {
           const acts = monthData[day]?.activities || [];
           acts.forEach((act) => {
-            sum += parseAmount(act.amount ?? act.fields?.金额);
+            if (selectedCategory === '全部' || act.title.includes(selectedCategory) || selectedCategory.includes(act.title)) {
+              sum += parseAmount(act.amount ?? act.fields?.金额);
+            }
           });
         });
         monthTotals[m - 1] = sum;
@@ -124,7 +127,7 @@ const StatsScreen = () => {
       .filter((p) => p.value > 0);
     const max = points.length ? Math.max(...points.map((p) => p.value)) : 0;
     return { points, max };
-  }, [dataCache, year]);
+  }, [dataCache, year, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -194,6 +197,13 @@ const StatsScreen = () => {
         )}
 
         <Text style={styles.subTitle}>今年月度走势</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={styles.filterContent}>
+          {['全部', ...((categories || []).map(c => c.name))].map((name) => (
+            <TouchableOpacity key={name} style={[styles.filterChip, selectedCategory === name ? styles.filterChipActive : null]} onPress={() => setSelectedCategory(name)} activeOpacity={0.8}>
+              <Text style={[styles.filterText, selectedCategory === name ? styles.filterTextActive : null]}>{name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
         {yearlyData.points.length === 0 ? (
           <Text style={styles.hint}>暂无月份数据</Text>
         ) : (
@@ -303,6 +313,33 @@ const styles = StyleSheet.create({
     ...typographyUtils.getTextStyle('h4', colors.app.textPrimary),
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.sm,
+  },
+  filterRow: {
+    marginBottom: theme.spacing.sm,
+  },
+  filterContent: {
+    paddingHorizontal: theme.spacing.xs,
+    gap: theme.spacing.xs,
+  },
+  filterChip: {
+    backgroundColor: colors.app.surface,
+    borderWidth: 1,
+    borderColor: colors.neutral[200],
+    borderRadius: theme.borderRadius.lg,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: theme.spacing.xs,
+    marginRight: theme.spacing.xs,
+  },
+  filterChipActive: {
+    backgroundColor: colors.primary[100],
+    borderColor: colors.primary[300],
+  },
+  filterText: {
+    ...typographyUtils.getTextStyle('caption', colors.app.textPrimary),
+  },
+  filterTextActive: {
+    ...typographyUtils.getTextStyle('caption', colors.primary[700]),
+    fontWeight: '600',
   },
 });
 
