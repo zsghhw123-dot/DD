@@ -151,6 +151,30 @@ const StatsScreen = () => {
     return { points, max };
   }, [dataCache, year, selectedCategory]);
 
+  const monthlyCountData = useMemo(() => {
+    const prefix = `${year}-`;
+    const monthCounts = Array.from({ length: 12 }, () => 0);
+    Object.keys(dataCache).forEach((key) => {
+      if (key.startsWith(prefix)) {
+        const m = Number(key.split('-')[1]);
+        const monthData = dataCache[key] || {};
+        Object.keys(monthData).forEach((day) => {
+          const acts = monthData[day]?.activities || [];
+          acts.forEach((act) => {
+            if (selectedCategory === '全部' || act.title.includes(selectedCategory) || selectedCategory.includes(act.title)) {
+              monthCounts[m - 1] += 1;
+            }
+          });
+        });
+      }
+    });
+    const points = monthCounts
+      .map((v, idx) => ({ month: idx + 1, value: v }))
+      .filter((p) => p.value > 0);
+    const max = points.length ? Math.max(...points.map((p) => p.value)) : 0;
+    return { points, max };
+  }, [dataCache, year, selectedCategory]);
+
   const categoryOptions = useMemo(() => {
     const monthKey = getMonthKey(year, month);
     const monthData = dataCache[monthKey] || {};
@@ -179,6 +203,7 @@ const StatsScreen = () => {
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.content}
+          stickyHeaderIndices={[0]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing || (isLoading && initialLoadDone)}
@@ -195,15 +220,17 @@ const StatsScreen = () => {
             />
           }
         >
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>本月统计</Text>
-          <View style={styles.selectorRow}>
-            <TouchableOpacity style={styles.selectorButton} onPress={() => setSelectorOpen(!selectorOpen)} activeOpacity={0.8}>
-              <Text style={styles.selectorButtonText}>{selectedCategory}</Text>
-              <Text style={styles.selectorButtonCaret}>▾</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+            <View>
+              <View style={styles.titleRow}>
+                <Text style={styles.title}>统计</Text>
+                <View style={styles.selectorRow}>
+                  <TouchableOpacity style={styles.selectorButton} onPress={() => setSelectorOpen(!selectorOpen)} activeOpacity={0.8}>
+                    <Text style={styles.selectorButtonText}>{selectedCategory}</Text>
+                    <Text style={styles.selectorButtonCaret}>▾</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
         {selectorOpen && (
           <Modal transparent animationType="fade" visible={selectorOpen} onRequestClose={() => setSelectorOpen(false)}>
             <TouchableWithoutFeedback onPress={() => setSelectorOpen(false)}>
@@ -345,6 +372,35 @@ const StatsScreen = () => {
             </Svg>
           </View>
         )}
+
+        <Text style={styles.subTitle}>今年活动次数（月度）</Text>
+        {monthlyCountData.points.length === 0 ? (
+          <Text style={styles.hint}>暂无月份数据</Text>
+        ) : (
+          <View style={styles.chartWrapper}>
+            <Svg width={chartWidth} height={chartHeight}>
+              {monthlyCountData.points.map((p, idx) => {
+                const usableWidth = chartWidth - 40;
+                const step = usableWidth / Math.max(monthlyCountData.points.length, 1);
+                const barW = Math.max(18, step * 0.5);
+                const x = 20 + idx * step + (step - barW) / 2;
+                const h = monthlyCountData.max ? Math.max(4, (p.value / monthlyCountData.max) * (chartHeight - 40)) : 4;
+                const y = chartHeight - 20 - h;
+                return (
+                  <React.Fragment key={`cnt-${p.month}`}>
+                    <Rect x={x} y={y} width={barW} height={h} fill={colors.primary[400] || '#4ade80'} rx={6} />
+                    <SvgText x={x + barW / 2} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                      {`${p.month}月`}
+                    </SvgText>
+                    <SvgText x={x + barW / 2} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
+                      {p.value}
+                    </SvgText>
+                  </React.Fragment>
+                );
+              })}
+            </Svg>
+          </View>
+        )}
         <View style={{ height: theme.spacing.xl }} />
       </ScrollView>
       )}
@@ -365,7 +421,6 @@ const styles = StyleSheet.create({
   },
   title: {
     ...typographyUtils.getTextStyle('h3', colors.app.textPrimary),
-    marginBottom: theme.spacing.md,
   },
   metricsCard: {
     backgroundColor: colors.app.surface,
@@ -417,6 +472,13 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: colors.app.background,
+    paddingVertical: theme.spacing.xs,
+    zIndex: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.neutral[200],
+    paddingVertical: theme.spacing.md,
   },
   selectorRow: {
     position: 'relative',
