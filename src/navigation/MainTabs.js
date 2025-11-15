@@ -1,12 +1,16 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Platform, StyleSheet, Text } from 'react-native';
+import { Platform, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
 import App from '../../App';
 import StatsScreen from '../screens/StatsScreen';
 import ActivitiesScreen from '../screens/ActivitiesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import { colors } from '../theme';
+import HomeIcon from '../assets/icons/hoem.svg';
+import StatsIcon from '../assets/icons/tongji.svg';
+import ActivityIcon from '../assets/icons/Activity.svg';
+import SettingsIcon from '../assets/icons/shezhi.svg';
 
 const Tab = createBottomTabNavigator();
 
@@ -29,14 +33,18 @@ const MainTabs = () => {
           fontSize: 12,
         },
         tabBarIcon: ({ color }) => {
-          const iconMap = {
-            首页: '🏠',
-            统计: '📊',
-            活动: '📋',
-            配置: '⚙️',
-          };
-          const icon = iconMap[route.name] || '⬤';
-          return <Text style={{ color, fontSize: 18 }}>{icon}</Text>;
+          switch (route.name) {
+            case '首页':
+              return <HomeIcon width={22} height={22} color={color} />;
+            case '统计':
+              return <StatsIcon width={22} height={22} color={color} />;
+            case '活动':
+              return <ActivityIcon width={22} height={22} color={color} />;
+            case '配置':
+              return <SettingsIcon width={22} height={22} color={color} />;
+            default:
+              return <HomeIcon width={22} height={22} color={color} />;
+          }
         },
         tabBarBackground: () => (
           <BlurView
