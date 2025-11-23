@@ -1,6 +1,6 @@
 import React, { useState , useEffect} from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
@@ -33,7 +33,7 @@ export default function App({ navigation }) {
     activityData,
     isLoading,
     handleDateChange: handleFeishuDateChange,
-    refreshCurrentMonthData,
+    refreshMonthDataForDate,
     dataCache,
     getMonthKey,
     categories
@@ -42,6 +42,7 @@ export default function App({ navigation }) {
 
 
   const { showVoiceButton } = useSettings();
+  const [refreshing, setRefreshing] = useState(false);
   // 处理日历年月变化的回调函数
   const handleDateChange = (year, month) => {
     setCurrentYear(year);
@@ -100,7 +101,7 @@ export default function App({ navigation }) {
                   navigation?.navigate('RecordDetail', {
                     selectedDate: selectedDate,
                     smartDateTime: getSmartDateTime(selectedDate),
-                    refreshCurrentMonthData: () => refreshCurrentMonthData(selectedDate),
+                    refreshMonthDataForDate: (date) => refreshMonthDataForDate(date || selectedDate),
                     quickActionData: {
                       title: title,
                       description: description,
@@ -141,7 +142,7 @@ export default function App({ navigation }) {
     navigation?.navigate('RecordDetail', {
       recordId: record.id,
       record: record,
-      refreshCurrentMonthData: () => refreshCurrentMonthData(selectedDate),
+      refreshMonthDataForDate: (date) => refreshMonthDataForDate(date || selectedDate),
     });
   };
 
@@ -150,7 +151,7 @@ export default function App({ navigation }) {
     navigation?.navigate('RecordDetail', {
       selectedDate: selectedDate,
       smartDateTime: getSmartDateTime(selectedDate),
-      refreshCurrentMonthData: () => refreshCurrentMonthData(selectedDate),
+      refreshMonthDataForDate: (date) => refreshMonthDataForDate(date || selectedDate),
     });
   };
 
@@ -193,6 +194,21 @@ export default function App({ navigation }) {
             <ScrollView
               style={{paddingHorizontal: theme.spacing.md}}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing || isLoading}
+                  onRefresh={async () => {
+                    setRefreshing(true);
+                    try {
+                      await refreshMonthDataForDate(selectedDate);
+                    } finally {
+                      setRefreshing(false);
+                    }
+                  }}
+                  tintColor={colors.primary[500]}
+                  colors={[colors.primary[500]]}
+                />
+              }
             >
               {selectedDateData.map(record => (
                 <RecordItem

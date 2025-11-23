@@ -556,6 +556,10 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     }
   };
 
+  const refreshMonthDataForDate = async (selectedDate) => {
+    return refreshCurrentMonthData(selectedDate);
+  };
+
   // 更新记录函数
   const updateRecord = async (recordId, formData) => {
     if (!accessToken) {
@@ -752,6 +756,7 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     createRecord,
     deleteRecord,
     refreshCurrentMonthData,
+    refreshMonthDataForDate,
     getMonthKey,
     updateRecord,
     uploadFile,
