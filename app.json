@@ -32,8 +32,9 @@
       ],
       "package": "com.anonymous.recordapp"
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+  "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     }
   }
 }
