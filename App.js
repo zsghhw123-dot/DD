@@ -222,6 +222,7 @@ export default function App({ navigation }) {
                   onPress={() => handleRecordPress(record)}
                 />
               ))}
+            <View className="h-12 transparent"></View>
             </ScrollView>
 
           </View>
