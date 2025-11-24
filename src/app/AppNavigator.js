@@ -1,10 +1,10 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import App from './App';
-import RecordDetail from './src/components/RecordDetail/RecordDetail';
-import MainTabs from './src/navigation/MainTabs';
-import { SettingsProvider } from './src/context/SettingsContext';
+import HomeScreen from '../screens/Home/HomeScreen';
+import RecordDetailScreen from '../screens/RecordDetail/RecordDetailScreen';
+import MainTabs from '../navigation/MainTabs';
+import { SettingsProvider } from '../context/SettingsContext';
 
 const Stack = createStackNavigator();
 
@@ -14,7 +14,7 @@ const AppNavigator = () => {
       <NavigationContainer>
         <Stack.Navigator initialRouteName="MainTabs">
           <Stack.Screen name="MainTabs" component={MainTabs} options={{ headerShown: false }} />
-          <Stack.Screen name="RecordDetail" component={RecordDetail} options={{ headerShown: false }} />
+          <Stack.Screen name="RecordDetail" component={RecordDetailScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
       </NavigationContainer>
     </SettingsProvider>

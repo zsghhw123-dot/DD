@@ -10,7 +10,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const StatsScreen = () => {
   const [year] = useState(new Date().getFullYear());
   const [month] = useState(new Date().getMonth() + 1);
-  const { dataCache, getMonthKey, isLoading, refreshMonthDataForDate, preloadYearData, categories } = useFeishuApi(year, month,{autoInitialize: false});
+  const { dataCache, getMonthKey, isLoading, refreshMonthDataForDate, preloadYearData, categories } = useFeishuApi(year, month, { autoInitialize: false });
   const [refreshing, setRefreshing] = useState(false);
   const currentMonthKey = getMonthKey(year, month);
   const currentMonthData = dataCache[currentMonthKey] || {};
@@ -220,133 +220,145 @@ const StatsScreen = () => {
             />
           }
         >
-            <View>
-              <View style={styles.titleRow}>
-                <Text style={styles.title}>统计</Text>
-                <View style={styles.selectorRow}>
-                  <TouchableOpacity style={styles.selectorButton} onPress={() => setSelectorOpen(!selectorOpen)} activeOpacity={0.8}>
-                    <Text style={styles.selectorButtonText}>{selectedCategory}</Text>
-                    <Text style={styles.selectorButtonCaret}>▾</Text>
-                  </TouchableOpacity>
-                </View>
+          <View>
+            <View style={styles.titleRow}>
+              <Text style={styles.title}>统计</Text>
+              <View style={styles.selectorRow}>
+                <TouchableOpacity style={styles.selectorButton} onPress={() => setSelectorOpen(!selectorOpen)} activeOpacity={0.8}>
+                  <Text style={styles.selectorButtonText}>{selectedCategory}</Text>
+                  <Text style={styles.selectorButtonCaret}>▾</Text>
+                </TouchableOpacity>
               </View>
             </View>
-        {selectorOpen && (
-          <Modal transparent animationType="fade" visible={selectorOpen} onRequestClose={() => setSelectorOpen(false)}>
-            <TouchableWithoutFeedback onPress={() => setSelectorOpen(false)}>
-              <View style={styles.modalOverlay}>
-                <View style={styles.modalMenu}>
-                  {categoryOptions.map((name) => (
-                    <TouchableOpacity key={name} style={styles.selectorMenuItem} onPress={() => { setSelectedCategory(name); setSelectorOpen(false); }} activeOpacity={0.8}>
-                      <Text style={[styles.selectorMenuText, selectedCategory === name ? styles.selectorMenuTextActive : null]}>{name}</Text>
-                    </TouchableOpacity>
-                  ))}
+          </View>
+          {selectorOpen && (
+            <Modal transparent animationType="fade" visible={selectorOpen} onRequestClose={() => setSelectorOpen(false)}>
+              <TouchableWithoutFeedback onPress={() => setSelectorOpen(false)}>
+                <View style={styles.modalOverlay}>
+                  <View style={styles.modalMenu}>
+                    {categoryOptions.map((name) => (
+                      <TouchableOpacity key={name} style={styles.selectorMenuItem} onPress={() => { setSelectedCategory(name); setSelectorOpen(false); }} activeOpacity={0.8}>
+                        <Text style={[styles.selectorMenuText, selectedCategory === name ? styles.selectorMenuTextActive : null]}>{name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              </View>
-            </TouchableWithoutFeedback>
-          </Modal>
-        )}
-        <View style={styles.metricsCard}>
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>当月总花费</Text>
-            <Text style={styles.metricValue}>¥{monthlyMetrics.total.toFixed(2)}</Text>
+              </TouchableWithoutFeedback>
+            </Modal>
+          )}
+          <View style={styles.metricsCard}>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>当月总花费</Text>
+              <Text style={styles.metricValue}>¥{monthlyMetrics.total.toFixed(2)}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>当日花费</Text>
+              <Text style={styles.metricValue}>¥{monthlyMetrics.todaySpend.toFixed(2)}</Text>
+            </View>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricLabel}>平均每日花费</Text>
+              <Text style={styles.metricValue}>¥{monthlyMetrics.avg.toFixed(2)}</Text>
+            </View>
           </View>
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>当日花费</Text>
-            <Text style={styles.metricValue}>¥{monthlyMetrics.todaySpend.toFixed(2)}</Text>
-          </View>
-          <View style={styles.metricRow}>
-            <Text style={styles.metricLabel}>平均每日花费</Text>
-            <Text style={styles.metricValue}>¥{monthlyMetrics.avg.toFixed(2)}</Text>
-          </View>
-        </View>
-        {chartData.items.length === 0 ? (
-          <Text style={styles.hint}>暂无数据</Text>
-        ) : (
-          <View style={styles.chartWrapper}>
-            <Svg width={chartWidth} height={chartHeight}>
-              {chartData.items.map((item, idx) => {
-                const x = 20 + idx * (barWidth + gap);
-                const h = chartData.max ? Math.max(4, (item.value / chartData.max) * (chartHeight - 40)) : 4;
-                const y = chartHeight - 20 - h;
-                return (
-                  <React.Fragment key={item.name}>
-                    <Rect x={x} y={y} width={barWidth} height={h} fill={colors.primary[500] || '#5B8FF9'} rx={6} />
-                    <SvgText x={x + barWidth / 2} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
-                      {item.name.length > 4 ? item.name.slice(0, 4) + '…' : item.name}
-                    </SvgText>
-                    <SvgText x={x + barWidth / 2} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
-                      {item.value}
-                    </SvgText>
-                  </React.Fragment>
-                );
-              })}
-            </Svg>
-          </View>
-        )}
-
-        <Text style={styles.subTitle}>当月每日走势</Text>
-        {dailyData.points.some(p => p.value > 0) ? (
-          <View style={styles.chartWrapper}>
-            <Svg width={chartWidth} height={chartHeight}>
-              {dailyData.points.map((p, idx) => {
-                const usableWidth = chartWidth - 40;
-                const step = usableWidth / Math.max(dailyData.points.length - 1, 1);
-                const x = 20 + idx * step;
-                const y = dailyData.max ? Math.max(4, chartHeight - 20 - (p.value / dailyData.max) * (chartHeight - 40)) : chartHeight - 20;
-                if (idx > 0) {
-                  const prev = dailyData.points[idx - 1];
-                  const prevX = 20 + (idx - 1) * step;
-                  const prevY = dailyData.max ? Math.max(4, chartHeight - 20 - (prev.value / dailyData.max) * (chartHeight - 40)) : chartHeight - 20;
+          {chartData.items.length === 0 ? (
+            <Text style={styles.hint}>暂无数据</Text>
+          ) : (
+            <View style={styles.chartWrapper}>
+              <Svg width={chartWidth} height={chartHeight}>
+                {chartData.items.map((item, idx) => {
+                  const x = 20 + idx * (barWidth + gap);
+                  const h = chartData.max ? Math.max(4, (item.value / chartData.max) * (chartHeight - 40)) : 4;
+                  const y = chartHeight - 20 - h;
                   return (
-                    <React.Fragment key={`dseg-${p.day}`}>
-                      <Line x1={prevX} y1={prevY} x2={x} y2={y} stroke={colors.primary[500] || '#5B8FF9'} strokeWidth={2} />
+                    <React.Fragment key={item.name}>
+                      <Rect x={x} y={y} width={barWidth} height={h} fill={colors.primary[500] || '#5B8FF9'} rx={6} />
+                      <SvgText x={x + barWidth / 2} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                        {item.name.length > 4 ? item.name.slice(0, 4) + '…' : item.name}
+                      </SvgText>
+                      <SvgText x={x + barWidth / 2} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
+                        {item.value}
+                      </SvgText>
+                    </React.Fragment>
+                  );
+                })}
+              </Svg>
+            </View>
+          )}
+
+          <Text style={styles.subTitle}>当月每日走势</Text>
+          {dailyData.points.some(p => p.value > 0) ? (
+            <View style={styles.chartWrapper}>
+              <Svg width={chartWidth} height={chartHeight}>
+                {dailyData.points.map((p, idx) => {
+                  const usableWidth = chartWidth - 40;
+                  const step = usableWidth / Math.max(dailyData.points.length - 1, 1);
+                  const x = 20 + idx * step;
+                  const y = dailyData.max ? Math.max(4, chartHeight - 20 - (p.value / dailyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                  if (idx > 0) {
+                    const prev = dailyData.points[idx - 1];
+                    const prevX = 20 + (idx - 1) * step;
+                    const prevY = dailyData.max ? Math.max(4, chartHeight - 20 - (prev.value / dailyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                    return (
+                      <React.Fragment key={`dseg-${p.day}`}>
+                        <Line x1={prevX} y1={prevY} x2={x} y2={y} stroke={colors.primary[500] || '#5B8FF9'} strokeWidth={2} />
+                        <Circle cx={x} cy={y} r={3} fill={colors.primary[500] || '#5B8FF9'} />
+                        <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                          {`${p.day}`}
+                        </SvgText>
+                        <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                          {Math.round(p.value)}
+                        </SvgText>
+                      </React.Fragment>
+                    );
+                  }
+                  return (
+                    <React.Fragment key={`dpt-${p.day}`}>
                       <Circle cx={x} cy={y} r={3} fill={colors.primary[500] || '#5B8FF9'} />
                       <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
-                        {`${p.day}日`}
+                        {`${p.day}`}
                       </SvgText>
                       <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
                         {Math.round(p.value)}
                       </SvgText>
                     </React.Fragment>
                   );
-                }
-                return (
-                  <React.Fragment key={`dpt-${p.day}`}>
-                    <Circle cx={x} cy={y} r={3} fill={colors.primary[500] || '#5B8FF9'} />
-                    <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
-                      {`${p.day}日`}
-                    </SvgText>
-                    <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
-                      {Math.round(p.value)}
-                    </SvgText>
-                  </React.Fragment>
-                );
-              })}
-            </Svg>
-          </View>
-        ) : (
-          <Text style={styles.hint}>当月暂无数据</Text>
-        )}
+                })}
+              </Svg>
+            </View>
+          ) : (
+            <Text style={styles.hint}>当月暂无数据</Text>
+          )}
 
-        <Text style={styles.subTitle}>今年月度走势</Text>
-        {yearlyData.points.length === 0 ? (
-          <Text style={styles.hint}>暂无月份数据</Text>
-        ) : (
-          <View style={styles.chartWrapper}>
-            <Svg width={chartWidth} height={chartHeight}>
-              {yearlyData.points.map((p, idx) => {
-                const usableWidth = chartWidth - 40;
-                const step = usableWidth / Math.max(yearlyData.points.length - 1, 1);
-                const x = 20 + idx * step;
-                const y = yearlyData.max ? Math.max(4, chartHeight - 20 - (p.value / yearlyData.max) * (chartHeight - 40)) : chartHeight - 20;
-                if (idx > 0) {
-                  const prev = yearlyData.points[idx - 1];
-                  const prevX = 20 + (idx - 1) * step;
-                  const prevY = yearlyData.max ? Math.max(4, chartHeight - 20 - (prev.value / yearlyData.max) * (chartHeight - 40)) : chartHeight - 20;
+          <Text style={styles.subTitle}>今年月度走势</Text>
+          {yearlyData.points.length === 0 ? (
+            <Text style={styles.hint}>暂无月份数据</Text>
+          ) : (
+            <View style={styles.chartWrapper}>
+              <Svg width={chartWidth} height={chartHeight}>
+                {yearlyData.points.map((p, idx) => {
+                  const usableWidth = chartWidth - 40;
+                  const step = usableWidth / Math.max(yearlyData.points.length - 1, 1);
+                  const x = 20 + idx * step;
+                  const y = yearlyData.max ? Math.max(4, chartHeight - 20 - (p.value / yearlyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                  if (idx > 0) {
+                    const prev = yearlyData.points[idx - 1];
+                    const prevX = 20 + (idx - 1) * step;
+                    const prevY = yearlyData.max ? Math.max(4, chartHeight - 20 - (prev.value / yearlyData.max) * (chartHeight - 40)) : chartHeight - 20;
+                    return (
+                      <React.Fragment key={`seg-${p.month}`}>
+                        <Line x1={prevX} y1={prevY} x2={x} y2={y} stroke={colors.primary[500] || '#5B8FF9'} strokeWidth={2} />
+                        <Circle cx={x} cy={y} r={4} fill={colors.primary[500] || '#5B8FF9'} />
+                        <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                          {`${p.month}月`}
+                        </SvgText>
+                        <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
+                          {Math.round(p.value)}
+                        </SvgText>
+                      </React.Fragment>
+                    );
+                  }
                   return (
-                    <React.Fragment key={`seg-${p.month}`}>
-                      <Line x1={prevX} y1={prevY} x2={x} y2={y} stroke={colors.primary[500] || '#5B8FF9'} strokeWidth={2} />
+                    <React.Fragment key={`pt-${p.month}`}>
                       <Circle cx={x} cy={y} r={4} fill={colors.primary[500] || '#5B8FF9'} />
                       <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
                         {`${p.month}月`}
@@ -356,53 +368,41 @@ const StatsScreen = () => {
                       </SvgText>
                     </React.Fragment>
                   );
-                }
-                return (
-                  <React.Fragment key={`pt-${p.month}`}>
-                    <Circle cx={x} cy={y} r={4} fill={colors.primary[500] || '#5B8FF9'} />
-                    <SvgText x={x} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
-                      {`${p.month}月`}
-                    </SvgText>
-                    <SvgText x={x} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
-                      {Math.round(p.value)}
-                    </SvgText>
-                  </React.Fragment>
-                );
-              })}
-            </Svg>
-          </View>
-        )}
+                })}
+              </Svg>
+            </View>
+          )}
 
-        <Text style={styles.subTitle}>今年活动次数（月度）</Text>
-        {monthlyCountData.points.length === 0 ? (
-          <Text style={styles.hint}>暂无月份数据</Text>
-        ) : (
-          <View style={styles.chartWrapper}>
-            <Svg width={chartWidth} height={chartHeight}>
-              {monthlyCountData.points.map((p, idx) => {
-                const usableWidth = chartWidth - 40;
-                const step = usableWidth / Math.max(monthlyCountData.points.length, 1);
-                const barW = Math.max(18, step * 0.5);
-                const x = 20 + idx * step + (step - barW) / 2;
-                const h = monthlyCountData.max ? Math.max(4, (p.value / monthlyCountData.max) * (chartHeight - 40)) : 4;
-                const y = chartHeight - 20 - h;
-                return (
-                  <React.Fragment key={`cnt-${p.month}`}>
-                    <Rect x={x} y={y} width={barW} height={h} fill={colors.primary[400] || '#4ade80'} rx={6} />
-                    <SvgText x={x + barW / 2} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
-                      {`${p.month}月`}
-                    </SvgText>
-                    <SvgText x={x + barW / 2} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
-                      {p.value}
-                    </SvgText>
-                  </React.Fragment>
-                );
-              })}
-            </Svg>
-          </View>
-        )}
-        <View style={{ height: theme.spacing.xl }} />
-      </ScrollView>
+          <Text style={styles.subTitle}>今年活动次数（月度）</Text>
+          {monthlyCountData.points.length === 0 ? (
+            <Text style={styles.hint}>暂无月份数据</Text>
+          ) : (
+            <View style={styles.chartWrapper}>
+              <Svg width={chartWidth} height={chartHeight}>
+                {monthlyCountData.points.map((p, idx) => {
+                  const usableWidth = chartWidth - 40;
+                  const step = usableWidth / Math.max(monthlyCountData.points.length, 1);
+                  const barW = Math.max(18, step * 0.5);
+                  const x = 20 + idx * step + (step - barW) / 2;
+                  const h = monthlyCountData.max ? Math.max(4, (p.value / monthlyCountData.max) * (chartHeight - 40)) : 4;
+                  const y = chartHeight - 20 - h;
+                  return (
+                    <React.Fragment key={`cnt-${p.month}`}>
+                      <Rect x={x} y={y} width={barW} height={h} fill={colors.primary[400] || '#4ade80'} rx={6} />
+                      <SvgText x={x + barW / 2} y={chartHeight - 5} fill={colors.app.textPrimary} fontSize={10} textAnchor="middle">
+                        {`${p.month}月`}
+                      </SvgText>
+                      <SvgText x={x + barW / 2} y={y - 6} fill={colors.app.textPrimary} fontSize={11} textAnchor="middle">
+                        {p.value}
+                      </SvgText>
+                    </React.Fragment>
+                  );
+                })}
+              </Svg>
+            </View>
+          )}
+          <View style={{ height: theme.spacing.xl }} />
+        </ScrollView>
       )}
     </SafeAreaView>
   );
@@ -476,8 +476,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.app.background,
     paddingVertical: theme.spacing.xs,
     zIndex: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[200],
     paddingVertical: theme.spacing.md,
   },
   selectorRow: {

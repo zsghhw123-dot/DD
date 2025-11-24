@@ -6,40 +6,40 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, theme } from '../../theme';
 import RubbishBin from '../../../assets/icons/rubbishBin.svg'
-import CategorySelector from '../CategorySelector';
+import CategorySelector from '../../components/CategorySelector';
 
 import { getSmartDateTime } from '../../utils/dateUtils';
 import { useFeishuApi } from '../../hooks/useFeishuApi';
-import AuthImage from '../AuthImage';
-import AuthVideo from '../AuthVideo';
+import AuthImage from '../../components/AuthImage';
+import AuthVideo from '../../components/AuthVideo';
 import AddIcon from '../../../assets/icons/add.svg'
 import FalseIcon from '../../../assets/icons/false.svg'
 
 const RecordDetail = ({ route, navigation }) => {
   const { record, selectedDate: passedSelectedDate, smartDateTime, refreshMonthDataForDate } = route?.params || {};
   const isNewRecord = !record;
-  
+
   // 格式化时间戳为年月日小时分钟格式
   const formatTimestamp = (timestamp) => {
     let date;
-    
+
     if (!timestamp) {
       date = new Date();
     } else {
       date = new Date(timestamp);
     }
-    
+
     // 检查日期是否有效
     if (isNaN(date.getTime())) {
       date = new Date();
     }
-    
+
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const hours = String(date.getHours()).padStart(2, '0');
     const minutes = String(date.getMinutes()).padStart(2, '0');
-    
+
     return `${year}/${month}/${day} ${hours}:${minutes}`;
   };
 
@@ -57,7 +57,7 @@ const RecordDetail = ({ route, navigation }) => {
   const [formData, setFormData] = useState({
     icon: record?.icon,
     category: record?.title || "请选择分类",
-    amount: record?.fields?.金额 ,
+    amount: record?.fields?.金额,
     description: record?.description,
     time: formatTimestamp(initialDateTime),
     location: record?.fields?.位置?.[0]?.text,
@@ -69,33 +69,33 @@ const RecordDetail = ({ route, navigation }) => {
 
   // 滚动与输入框引用
   const scrollViewRef = useRef(null);
-  
+
   // 媒体文件状态
   const [mediaFiles, setMediaFiles] = useState(record?.fields?.照片?.map((item) => ({
     type: item.type,
     uri: item.url
   })) || []);
-  
+
   // 日期时间选择器状态
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(initialDateTime);
   const [tempDate, setTempDate] = useState(initialDateTime);
-  
+
   // 媒体选项弹窗状态
   const [showMediaOptions, setShowMediaOptions] = useState(false);
-  
+
   // 位置获取状态
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  
+
   // 保存和删除操作的加载状态
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
+
   // 文件上传加载状态
   const [isUploading, setIsUploading] = useState(false);
-  
+
   // 飞书API hook（禁用自动初始化，因为只需要功能函数）
-  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories , accessToken, uploadFile} = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1, { autoInitialize: false });
+  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories, accessToken, uploadFile } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1, { autoInitialize: false });
 
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -108,15 +108,15 @@ const RecordDetail = ({ route, navigation }) => {
     // 新记录使用默认分类
     return undefined
   });
-  
+
   console.log('RecordDetail - record:', record);
   console.log('RecordDetail - formData:', formData);
-  
+
   // 获取当前位置信息
   const getCurrentLocation = async () => {
     try {
       setIsLoadingLocation(true);
-      
+
       // 请求位置权限
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
@@ -150,11 +150,11 @@ const RecordDetail = ({ route, navigation }) => {
           address.street,
           address.name
         ].filter(Boolean);
-        
-        const locationText = locationParts.length > 0 
-          ? locationParts.join('') 
+
+        const locationText = locationParts.length > 0
+          ? locationParts.join('')
           : `${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`;
-        
+
         // 更新位置信息
         setFormData(prev => ({
           ...prev,
@@ -170,13 +170,13 @@ const RecordDetail = ({ route, navigation }) => {
     } catch (error) {
       console.error('获取位置失败:', error);
       let errorMessage = '获取位置失败';
-      
+
       if (error.code === 'E_LOCATION_TIMEOUT') {
         errorMessage = '位置获取超时';
       } else if (error.code === 'E_LOCATION_UNAVAILABLE') {
         errorMessage = '位置服务不可用';
       }
-      
+
       setFormData(prev => ({
         ...prev,
         location: errorMessage
@@ -199,7 +199,7 @@ const RecordDetail = ({ route, navigation }) => {
         console.error('请求相册权限失败:', error);
       }
     };
-    
+
     requestMediaPermissions();
   }, []);
 
@@ -241,14 +241,14 @@ const RecordDetail = ({ route, navigation }) => {
         Alert.alert('提示', '在 Web 浏览器中，图片选择功能可能受限');
         return;
       }
-      
+
       // 请求相册权限
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('权限提示', '需要相册权限才能选择图片');
         return;
       }
-      
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         quality: 0.8,
@@ -256,7 +256,7 @@ const RecordDetail = ({ route, navigation }) => {
       });
 
       console.log('图片选择结果:', result);
-      
+
       if (!result.canceled && result.assets.length > 0) {
         await handleMultipleImageResults(result.assets);
       }
@@ -275,21 +275,21 @@ const RecordDetail = ({ route, navigation }) => {
         Alert.alert('提示', '在 Web 浏览器中，拍照功能可能受限');
         return;
       }
-      
+
       // 请求相机权限
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('权限提示', '需要相机权限才能拍照');
         return;
       }
-      
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         quality: 0.8,
       });
 
       console.log('拍照结果:', result);
-      
+
       if (!result.canceled && result.assets.length > 0) {
         await handleImageResult(result.assets[0]);
       }
@@ -309,17 +309,19 @@ const RecordDetail = ({ route, navigation }) => {
         fileName: asset.fileName || `image_${Date.now()}.jpg`
       }];
       setMediaFiles(newMedia);
-      setFormData(prev => ({...prev, media: newMedia}));
-      
+      setFormData(prev => ({ ...prev, media: newMedia }));
+
       // 开始上传，显示加载状态
       setIsUploading(true);
       const uploadResult = await uploadFile(asset.uri, asset.fileName || `image_${Date.now()}.jpg`);
-      
+
       if (uploadResult.success && uploadResult.file_token) {
         console.log('文件上传成功，file_token:', uploadResult.file_token);
-        setFormData(prev => ({...prev, 照片: [...prev.照片, {
-          file_token: uploadResult.file_token
-        }]}));
+        setFormData(prev => ({
+          ...prev, 照片: [...prev.照片, {
+            file_token: uploadResult.file_token
+          }]
+        }));
       } else {
         console.error('文件上传失败:', uploadResult.error);
         Alert.alert('上传失败', '图片上传失败，请重试');
@@ -338,7 +340,7 @@ const RecordDetail = ({ route, navigation }) => {
     try {
       // 开始上传，显示加载状态
       setIsUploading(true);
-      
+
       // 添加所有图片到媒体列表
       const timestamp = Date.now();
       const newMediaItems = assets.map((asset, index) => ({
@@ -346,16 +348,16 @@ const RecordDetail = ({ route, navigation }) => {
         type: 'image',
         fileName: asset.fileName || `image_${timestamp}_${index}.jpg`
       }));
-      
+
       const newMedia = [...mediaFiles, ...newMediaItems];
       setMediaFiles(newMedia);
-      setFormData(prev => ({...prev, media: newMedia}));
-      
+      setFormData(prev => ({ ...prev, media: newMedia }));
+
       // 逐个上传图片
       const uploadPromises = assets.map(async (asset, index) => {
         const fileName = asset.fileName || `image_${timestamp}_${index}.jpg`;
         const uploadResult = await uploadFile(asset.uri, fileName);
-        
+
         if (uploadResult.success && uploadResult.file_token) {
           console.log(`文件 ${index + 1}/${assets.length} 上传成功，file_token:`, uploadResult.file_token);
           return uploadResult.file_token;
@@ -364,20 +366,20 @@ const RecordDetail = ({ route, navigation }) => {
           return null;
         }
       });
-      
+
       // 等待所有上传完成
       const fileTokens = await Promise.all(uploadPromises);
-      
+
       // 过滤掉失败的上传（null值）
       const successfulTokens = fileTokens.filter(token => token !== null);
-      
+
       if (successfulTokens.length > 0) {
         // 更新表单数据，添加所有成功上传的文件token
         setFormData(prev => ({
           ...prev,
           照片: [...prev.照片, ...successfulTokens.map(token => ({ file_token: token }))]
         }));
-        
+
         if (successfulTokens.length < assets.length) {
           Alert.alert('部分上传失败', `${successfulTokens.length}/${assets.length} 张图片上传成功`);
         }
@@ -442,7 +444,7 @@ const RecordDetail = ({ route, navigation }) => {
       });
 
       console.log('视频选择结果:', result);
-      
+
       if (!result.canceled && result.assets.length > 0) {
         const newMedia = [...mediaFiles, ...result.assets.map(asset => ({
           uri: asset.uri,
@@ -450,23 +452,25 @@ const RecordDetail = ({ route, navigation }) => {
           fileName: asset.fileName || `video_${Date.now()}.mp4`
         }))];
         setMediaFiles(newMedia);
-        setFormData(prev => ({...prev, media: newMedia}));
-        
+        setFormData(prev => ({ ...prev, media: newMedia }));
+
         // 开始上传，显示加载状态
         console.log('开始上传视频...');
         setIsUploading(true);
         const uploadResult = await uploadFile(result.assets[0].uri, result.assets[0].fileName || `video_${Date.now()}.mp4`);
-        
+
         if (uploadResult.success && uploadResult.file_token) {
           console.log('文件上传成功，file_token:', uploadResult.file_token);
-          setFormData(prev => ({...prev, 照片: [...prev.照片, {
-            file_token: uploadResult.file_token
-          }]}));
+          setFormData(prev => ({
+            ...prev, 照片: [...prev.照片, {
+              file_token: uploadResult.file_token
+            }]
+          }));
         } else {
           console.error('文件上传失败:', uploadResult.error);
           Alert.alert('上传失败', '视频上传失败，请重试');
         }
-        
+
       }
     } catch (error) {
       console.error('选择视频失败:', error);
@@ -478,8 +482,8 @@ const RecordDetail = ({ route, navigation }) => {
   const removeMedia = (index) => {
     const newMedia = mediaFiles.filter((_, i) => i !== index);
     setMediaFiles(newMedia);
-    setFormData(prev => ({...prev, 照片: prev.照片.filter((_, i) => i !== index)}));
-    setFormData(prev => ({...prev, media: newMedia}));
+    setFormData(prev => ({ ...prev, 照片: prev.照片.filter((_, i) => i !== index) }));
+    setFormData(prev => ({ ...prev, media: newMedia }));
   };
 
   // 分类选择处理函数
@@ -495,52 +499,52 @@ const RecordDetail = ({ route, navigation }) => {
   const openCategorySelector = () => {
     setShowCategorySelector(true);
   };
-  
+
   // 处理日期时间选择
   const handleDateChange = (event, date) => {
     if (date) {
       setTempDate(date);
     }
   };
-  
+
   // 确认日期选择
   const confirmDateSelection = () => {
     setSelectedDate(tempDate);
     const formattedTime = formatTimestamp(tempDate);
-    setFormData({...formData, time: formattedTime});
+    setFormData({ ...formData, time: formattedTime });
     setShowDatePicker(false);
   };
-  
+
   // 取消日期选择
   const cancelDateSelection = () => {
     setTempDate(selectedDate); // 恢复到之前的日期
     setShowDatePicker(false);
   };
-  
+
   // 显示日期选择器
   const showDateTimePicker = () => {
     setTempDate(selectedDate); // 设置临时日期为当前选择的日期
     setShowDatePicker(true);
   };
-  
+
   const handleSave = async () => {
     // 校验是否选择了分类
     if (!formData.icon) {
       Alert.alert('提示', '请先选择类别');
       return;
     }
-    
+
     console.log('保存记录:', formData);
-    
+
     // 设置保存中状态
     setIsSaving(true);
-    
+
     // 只有新记录才需要保存到飞书
     if (isNewRecord) {
       try {
         // 处理金额，去掉金钱符号
         const cleanAmount = formData.amount ? Number(formData.amount.replace(/[¥$€£]/g, '')) : 0;
-        
+
         // 准备请求数据
         const saveData = {
           location: formData.location || '',
@@ -552,12 +556,12 @@ const RecordDetail = ({ route, navigation }) => {
           media: formData.media || [], // 添加媒体文件信息,
           照片: formData.照片 || [], // 添加照片信息
         };
-        
+
         console.log('准备保存的数据:', saveData);
-        
+
         // 调用createRecord保存到飞书
         const result = await createRecord(saveData);
-        
+
         if (result.success) {
           console.log('保存成功!');
           debugger
@@ -567,7 +571,7 @@ const RecordDetail = ({ route, navigation }) => {
             await new Promise(resolve => setTimeout(resolve, 2000));
             refreshMonthDataForDate(passedSelectedDate);
           }
-          
+
           Alert.alert(
             '保存成功',
             '记录已成功添加到飞书多维表格',
@@ -599,7 +603,7 @@ const RecordDetail = ({ route, navigation }) => {
       }
     } else {
       // 现有记录的更新逻辑
-      try {   
+      try {
         // 准备请求数据
         const updateData = {
           location: formData.location || '',
@@ -611,22 +615,22 @@ const RecordDetail = ({ route, navigation }) => {
           media: formData.media || [], // 添加媒体文件信息
           照片: formData.照片 || [], // 添加照片信息
         };
-        
+
         console.log('准备更新的数据:', updateData);
-        
+
         // 调用updateRecord更新到飞书
         const result = await updateRecord(record.id, updateData);
-        
+
         if (result.success) {
           console.log('更新成功!');
-          
+
           // 刷新当前月份的数据
           if (refreshMonthDataForDate) {
             // 延迟1000ms执行，确保其他操作完成
             await new Promise(resolve => setTimeout(resolve, 1000));
             refreshMonthDataForDate(passedSelectedDate);
           }
-          
+
           Alert.alert(
             '更新成功',
             '记录已成功更新',
@@ -665,10 +669,10 @@ const RecordDetail = ({ route, navigation }) => {
 
   const handleDelete = async () => {
     console.log('删除记录');
-    
+
     // 设置删除中状态
     setIsDeleting(true);
-    
+
     // 如果是新记录（尚未保存到服务器），直接返回
     if (isNewRecord) {
       setIsDeleting(false);
@@ -692,7 +696,7 @@ const RecordDetail = ({ route, navigation }) => {
         if (refreshMonthDataForDate) {
           await refreshMonthDataForDate(passedSelectedDate);
         }
-        
+
         Alert.alert(
           '删除成功',
           '记录已成功删除',
@@ -732,8 +736,8 @@ const RecordDetail = ({ route, navigation }) => {
         </TouchableOpacity>
         {!isNewRecord && <Text style={styles.headerTitle}>记录详情</Text>}
         {!isNewRecord && (
-          <TouchableOpacity 
-            onPress={handleDelete} 
+          <TouchableOpacity
+            onPress={handleDelete}
             style={styles.deleteButton}
             disabled={isDeleting}
           >
@@ -786,7 +790,7 @@ const RecordDetail = ({ route, navigation }) => {
                 onChangeText={(text) => {
                   // 允许输入数字、小数点和空字符串
                   if (text === '' || /^\d*\.?\d*$/.test(text)) {
-                    setFormData({...formData, amount: text});
+                    setFormData({ ...formData, amount: text });
                   }
                 }}
                 keyboardType="numeric"
@@ -796,7 +800,7 @@ const RecordDetail = ({ route, navigation }) => {
             </View>
           </View>
 
-          
+
 
           {/* 时间 */}
           <TouchableOpacity style={styles.fieldRow} onPress={showDateTimePicker}>
@@ -822,7 +826,7 @@ const RecordDetail = ({ route, navigation }) => {
               <TextInput
                 style={styles.fieldValue}
                 value={isLoadingLocation ? '正在获取位置...' : formData.location}
-                onChangeText={(text) => setFormData({...formData, location: text})}
+                onChangeText={(text) => setFormData({ ...formData, location: text })}
                 placeholder="添加位置"
                 editable={!isLoadingLocation}
               />
@@ -840,11 +844,11 @@ const RecordDetail = ({ route, navigation }) => {
             <View style={styles.notesSection}>
               <Text style={styles.notesLabel}>备注</Text>
               <View style={styles.notesInputContainer}>
-                
+
                 <TextInput
                   style={styles.notesTextInput}
                   value={formData.description}
-                  onChangeText={(text) => setFormData({...formData, description: text})}
+                  onChangeText={(text) => setFormData({ ...formData, description: text })}
                   placeholder="添加备注"
                   multiline
                   numberOfLines={4}
@@ -883,29 +887,29 @@ const RecordDetail = ({ route, navigation }) => {
                   ))}
                 </View>
 
-                
+
               </View>
             </View>
           </View>
         )}
 
         {/* 保存按钮 */}
-        <TouchableOpacity 
-          style={[styles.saveButton, isSaving && styles.disabledButton]} 
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.disabledButton]}
           onPress={handleSave}
-          disabled={isSaving || isDeleting}
+          disabled={isSaving || isDeleting || isUploading}
         >
           {isSaving ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={colors.text.inverse} />
-              <Text style={[styles.saveButtonText, {marginLeft: 8}]}>保存中...</Text>
+              <Text style={[styles.saveButtonText, { marginLeft: 8 }]}>保存中...</Text>
             </View>
           ) : (
             <Text style={styles.saveButtonText}>保存</Text>
           )}
         </TouchableOpacity>
       </KeyboardAwareScrollView>
-      
+
       {/* 日期时间选择器模态框 */}
       <Modal
         visible={showDatePicker}
@@ -918,7 +922,7 @@ const RecordDetail = ({ route, navigation }) => {
             <View style={styles.datePickerHeader}>
               <Text style={styles.datePickerTitle}>选择日期和时间</Text>
             </View>
-            
+
             <View style={styles.datePickerContent}>
               {Platform.OS === 'web' ? (
                 <input
@@ -954,17 +958,17 @@ const RecordDetail = ({ route, navigation }) => {
                 </View>
               )}
             </View>
-            
+
             <View style={styles.datePickerButtons}>
-              <TouchableOpacity 
-                style={[styles.datePickerButton, styles.cancelButton]} 
+              <TouchableOpacity
+                style={[styles.datePickerButton, styles.cancelButton]}
                 onPress={cancelDateSelection}
               >
                 <Text style={styles.cancelButtonText}>取消</Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.datePickerButton, styles.confirmButton]} 
+
+              <TouchableOpacity
+                style={[styles.datePickerButton, styles.confirmButton]}
                 onPress={confirmDateSelection}
               >
                 <Text style={styles.confirmButtonText}>确认</Text>
@@ -992,7 +996,7 @@ const RecordDetail = ({ route, navigation }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.mediaOptionsContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.mediaOptionButton}
               onPress={() => {
                 setShowMediaOptions(false);
@@ -1001,8 +1005,8 @@ const RecordDetail = ({ route, navigation }) => {
             >
               <Text style={styles.mediaOptionText}>添加图片</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={styles.mediaOptionButton}
               onPress={() => {
                 setShowMediaOptions(false);
@@ -1011,8 +1015,8 @@ const RecordDetail = ({ route, navigation }) => {
             >
               <Text style={styles.mediaOptionText}>添加视频</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <TouchableOpacity
               style={[styles.mediaOptionButton, styles.cancelButton]}
               onPress={() => setShowMediaOptions(false)}
             >
@@ -1210,7 +1214,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.app.textPrimary,
   },
-  
+
   // 媒体预览样式
   mediaPreviewSection: {
     backgroundColor: colors.app.surface,
@@ -1335,7 +1339,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  
+
   // 日期选择器模态框样式
   modalOverlay: {
     flex: 1,
@@ -1410,19 +1414,19 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.app.textPrimary,
   },
-  
+
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  
+
   uploadingText: {
     fontSize: 14,
     color: colors.app.textPrimary,
     fontWeight: '500',
   },
-  
+
   disabledButton: {
     opacity: 0.7,
   },

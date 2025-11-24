@@ -1,5 +1,5 @@
-import React, { useState , useEffect} from 'react';
-import './global.css';
+import React, { useState, useEffect } from 'react';
+import '../../../global.css';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -8,19 +8,19 @@ import * as Haptics from 'expo-haptics';
 import * as Linking from 'expo-linking';
 
 // 导入自定义hooks
-import { useFeishuApi } from './src/hooks/useFeishuApi';
+import { useFeishuApi } from '../../hooks/useFeishuApi';
 
 // 导入组件
-import Calendar from './src/components/Calendar/Calendar';
-import RecordItem from './src/components/RecordItem/RecordItem';
-import VoiceButton from './src/components/VoiceButton';
+import Calendar from '../../components/Calendar/Calendar';
+import RecordItem from '../../components/RecordItem/RecordItem';
+import VoiceButton from '../../components/VoiceButton';
 
 // 导入主题系统
-import { theme, colors, typography, typographyUtils } from './src/theme';
-import { getSmartDateTime } from './src/utils/dateUtils';
-import { useSettings } from './src/context/SettingsContext';
+import { theme, colors, typography, typographyUtils } from '../../theme';
+import { getSmartDateTime } from '../../utils/dateUtils';
+import { useSettings } from '../../context/SettingsContext';
 
-export default function App({ navigation }) {
+export default function HomeScreen({ navigation }) {
   // 当前显示的年月状态
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
@@ -50,7 +50,7 @@ export default function App({ navigation }) {
     setCurrentMonth(month);
     handleFeishuDateChange(year, month);
   };
-  
+
 
   // 处理日期选择
   const handleDateSelect = (date, dayActivities) => {
@@ -69,8 +69,8 @@ export default function App({ navigation }) {
       const year = selectedDate.getFullYear();
       const monthKey = getMonthKey(year, month);
       const dayActivities = dataCache[monthKey]?.[day]?.activities || [];
-      
-    //   const dayActivities = activityData[day]?.activities || [];
+
+      //   const dayActivities = activityData[day]?.activities || [];
       setSelectedDateData(dayActivities);
     }
   }, [activityData, selectedDate]);
@@ -79,15 +79,15 @@ export default function App({ navigation }) {
   useEffect(() => {
     const handleDeepLink = ({ url }) => {
       console.log('收到深度链接:', url);
-      
+
       // 解析URL参数
       const parsedUrl = Linking.parse(url);
       const { queryParams } = parsedUrl;
-      
+
       if (queryParams) {
         // 处理快捷指令发送的数据
         const { title, description, amount, category } = queryParams;
-        
+
         if (title) {
           // 显示确认对话框
           Alert.alert(
@@ -95,8 +95,8 @@ export default function App({ navigation }) {
             `标题: ${title}\n描述: ${description || '无'}\n金额: ${amount || '0'}\n分类: ${category || '未指定'}`,
             [
               { text: '取消', style: 'cancel' },
-              { 
-                text: '创建记录', 
+              {
+                text: '创建记录',
                 onPress: () => {
                   // 导航到创建记录页面，传递数据
                   navigation?.navigate('RecordDetail', {
@@ -166,8 +166,8 @@ export default function App({ navigation }) {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <SafeAreaView style={styles.safeArea}>
-        <StatusBar style="auto" />
-        <Calendar
+          <StatusBar style="auto" />
+          <Calendar
             onDateChange={handleDateChange}
             onDateSelect={handleDateSelect}
             activityData={activityData}
@@ -175,25 +175,25 @@ export default function App({ navigation }) {
           />
 
           <View style={[styles.recordsContainer, showVoiceButton ? { paddingBottom: 80 } : null]}>
-            
+
             <View style={styles.recordsHeader}>
               <Text style={styles.recordsTitle}>
                 {selectedDate.getDate()}日活动
               </Text>
 
-              <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleAddRecord}
-              activeOpacity={0.8}
-            >
-              <View style={styles.actionButtonContent}>
-                 <Text style={styles.actionButtonText}>添加新记录</Text>
-               </View>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleAddRecord}
+                activeOpacity={0.8}
+              >
+                <View style={styles.actionButtonContent}>
+                  <Text style={styles.actionButtonText}>添加新记录</Text>
+                </View>
+              </TouchableOpacity>
             </View>
 
             <ScrollView
-              style={{paddingHorizontal: theme.spacing.md}}
+              style={{ paddingHorizontal: theme.spacing.md }}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl
@@ -222,18 +222,18 @@ export default function App({ navigation }) {
                   onPress={() => handleRecordPress(record)}
                 />
               ))}
-            <View className="h-12 transparent"></View>
+              <View className="h-12 transparent"></View>
             </ScrollView>
 
           </View>
 
           {showVoiceButton && (
-            <VoiceButton 
+            <VoiceButton
               onAddRecord={handleAddRecord}
               onKeyboardPress={handleKeyboardPress}
             />
           )}
-        
+
         </SafeAreaView>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -253,13 +253,13 @@ const styles = StyleSheet.create({
   recordsContainer: {
     marginTop: theme.spacing.sm,
     flex: 1,
-    
+
   },
   recordsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-        marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.sm,
     marginLeft: theme.spacing.lg,
     marginRight: theme.spacing.md,

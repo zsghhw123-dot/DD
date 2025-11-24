@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Platform, StyleSheet } from 'react-native';
 import { BlurView } from 'expo-blur';
-import App from '../../App';
+import HomeScreen from '../screens/Home/HomeScreen';
 import StatsScreen from '../screens/StatsScreen';
 import ActivitiesScreen from '../screens/ActivitiesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -55,7 +55,7 @@ const MainTabs = () => {
         ),
       })}
     >
-      <Tab.Screen name="首页" component={App} />
+      <Tab.Screen name="首页" component={HomeScreen} />
       <Tab.Screen name="统计" component={StatsScreen} />
       <Tab.Screen name="活动" component={ActivitiesScreen} />
       <Tab.Screen name="配置" component={SettingsScreen} />
