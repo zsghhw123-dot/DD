@@ -16,7 +16,7 @@ import AddIcon from '../../../assets/icons/add.svg'
 import FalseIcon from '../../../assets/icons/false.svg'
 
 const RecordDetail = ({ route, navigation }) => {
-  const { record, selectedDate: passedSelectedDate, smartDateTime, refreshCurrentMonthData } = route?.params || {};
+  const { record, selectedDate: passedSelectedDate, smartDateTime, refreshMonthDataForDate } = route?.params || {};
   const isNewRecord = !record;
   
   // 格式化时间戳为年月日小时分钟格式
@@ -560,12 +560,12 @@ const RecordDetail = ({ route, navigation }) => {
         
         if (result.success) {
           console.log('保存成功!');
-          
+          debugger
           // 刷新当前月份的数据
-          if (refreshCurrentMonthData) {
+          if (refreshMonthDataForDate) {
             // 延迟2000ms执行，确保其他操作完成
             await new Promise(resolve => setTimeout(resolve, 2000));
-            refreshCurrentMonthData(passedSelectedDate);
+            refreshMonthDataForDate(passedSelectedDate);
           }
           
           Alert.alert(
@@ -599,9 +599,7 @@ const RecordDetail = ({ route, navigation }) => {
       }
     } else {
       // 现有记录的更新逻辑
-      try {
-
-        
+      try {   
         // 准备请求数据
         const updateData = {
           location: formData.location || '',
@@ -623,10 +621,10 @@ const RecordDetail = ({ route, navigation }) => {
           console.log('更新成功!');
           
           // 刷新当前月份的数据
-          if (refreshCurrentMonthData) {
+          if (refreshMonthDataForDate) {
             // 延迟1000ms执行，确保其他操作完成
             await new Promise(resolve => setTimeout(resolve, 1000));
-            refreshCurrentMonthData(passedSelectedDate);
+            refreshMonthDataForDate(passedSelectedDate);
           }
           
           Alert.alert(
@@ -691,8 +689,8 @@ const RecordDetail = ({ route, navigation }) => {
 
       if (result.success) {
         // 刷新当前月份的数据
-        if (refreshCurrentMonthData) {
-          await refreshCurrentMonthData(passedSelectedDate);
+        if (refreshMonthDataForDate) {
+          await refreshMonthDataForDate(passedSelectedDate);
         }
         
         Alert.alert(
