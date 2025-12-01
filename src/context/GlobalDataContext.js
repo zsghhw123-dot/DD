@@ -459,7 +459,7 @@ export const GlobalDataProvider = ({ children }) => {
 
         try {
             console.log(`🔄 刷新${year}年${month}月数据`);
-            setIsLoading(true);
+            // setIsLoading(true); // 移除全局loading，避免影响其他页面
 
             const data = await getBitableRecords(accessToken, year, month, categories);
 
@@ -476,7 +476,7 @@ export const GlobalDataProvider = ({ children }) => {
         } catch (error) {
             console.error('刷新月份数据时出错:', error);
         } finally {
-            setIsLoading(false);
+            // setIsLoading(false);
         }
     };
 
