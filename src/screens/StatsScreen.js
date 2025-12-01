@@ -20,8 +20,17 @@ const StatsScreen = () => {
   const [selectorOpen, setSelectorOpen] = useState(false);
 
   React.useEffect(() => {
-    preloadYearData(year);
-  }, [year]);
+    // 检查缓存中是否已有该年份的数据
+    const hasYearData = Object.keys(dataCache).some(key => key.startsWith(`${year}-`));
+
+    // 只在缓存中没有数据时才加载
+    if (!hasYearData) {
+      console.log(`StatsScreen: 缓存中没有 ${year} 年的数据，开始预加载`);
+      preloadYearData(year);
+    } else {
+      console.log(`StatsScreen: 缓存中已有 ${year} 年的数据，跳过预加载`);
+    }
+  }, [year, dataCache]);
 
   React.useEffect(() => {
     if (!isLoading && !initialLoadDone) {

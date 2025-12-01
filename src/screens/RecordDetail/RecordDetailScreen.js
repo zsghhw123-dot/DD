@@ -564,7 +564,6 @@ const RecordDetail = ({ route, navigation }) => {
 
         if (result.success) {
           console.log('保存成功!');
-          debugger
           // 刷新当前月份的数据
           if (refreshMonthDataForDate) {
             // 延迟2000ms执行，确保其他操作完成
