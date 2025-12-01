@@ -193,7 +193,8 @@ export default function HomeScreen({ navigation }) {
             </View>
 
             <ScrollView
-              style={{ paddingHorizontal: theme.spacing.md }}
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingHorizontal: theme.spacing.md, paddingBottom: theme.spacing.xl }}
               showsVerticalScrollIndicator={false}
               refreshControl={
                 <RefreshControl

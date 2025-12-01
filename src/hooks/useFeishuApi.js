@@ -20,6 +20,7 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     preloadRange,
     ensureMonthData,
     getMonthKey,
+    findSimilarCategory,
   } = useGlobalData();
 
   // 本地状态：当前显示的活动数据
@@ -448,6 +449,7 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
     getMonthKey,
     updateRecord,
     uploadFile,
+    findSimilarCategory,
     fetchCategories,
     getCategoryById,
     getCategoryByName,

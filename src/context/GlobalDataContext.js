@@ -621,6 +621,63 @@ export const GlobalDataProvider = ({ children }) => {
         }
     };
 
+    // 根据备注查找相似分类
+    const findSimilarCategory = (description) => {
+        if (!description || description.length < 2) return null;
+
+        const searchDesc = description.trim();
+        const categoryStats = {};
+
+        // 遍历所有缓存数据
+        Object.values(dataCache).forEach(monthCache => {
+            const monthData = monthCache.data || {};
+            Object.values(monthData).forEach(dayData => {
+                const activities = dayData.activities || [];
+                activities.forEach(activity => {
+                    // 跳过没有备注或分类为"其它"/"其他"的记录
+                    if (!activity.description || !activity.title) return;
+                    if (activity.title === '其它' || activity.title === '其他') return;
+
+                    const actDesc = activity.description.trim();
+
+                    // 匹配策略：
+                    // 1. 完全匹配
+                    // 2. 包含匹配 (输入包含记录备注，或记录备注包含输入)
+                    if (actDesc === searchDesc || actDesc.includes(searchDesc) || searchDesc.includes(actDesc)) {
+                        const key = `${activity.icon}|${activity.title}`;
+                        if (!categoryStats[key]) {
+                            categoryStats[key] = {
+                                count: 0,
+                                icon: activity.icon,
+                                name: activity.title,
+                                // 完全匹配权重更高
+                                weight: actDesc === searchDesc ? 2 : 1
+                            };
+                        }
+                        categoryStats[key].count += 1;
+                        categoryStats[key].weight += (actDesc === searchDesc ? 2 : 1);
+                    }
+                });
+            });
+        });
+
+        // 找出权重最高的分类
+        let bestMatch = null;
+        let maxWeight = 0;
+
+        Object.values(categoryStats).forEach(stat => {
+            if (stat.weight > maxWeight) {
+                maxWeight = stat.weight;
+                bestMatch = {
+                    icon: stat.icon,
+                    name: stat.name
+                };
+            }
+        });
+
+        return bestMatch;
+    };
+
     // 清除所有缓存（用于设置页面）
     const clearAllCache = async () => {
         try {
@@ -667,6 +724,7 @@ export const GlobalDataProvider = ({ children }) => {
         ensureMonthData,
         getMonthKey,
         clearAllCache,
+        findSimilarCategory,
 
         // API 方法
         getTenantAccessToken,

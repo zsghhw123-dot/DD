@@ -4,7 +4,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import DateTimePicker from '@react-native-community/datetimepicker';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
-import { colors, theme } from '../../theme';
+import { colors, theme, typographyUtils } from '../../theme';
 import RubbishBin from '../../../assets/icons/rubbishBin.svg'
 import CategorySelector from '../../components/CategorySelector';
 
@@ -95,7 +95,7 @@ const RecordDetail = ({ route, navigation }) => {
   const [isUploading, setIsUploading] = useState(false);
 
   // 飞书API hook（禁用自动初始化，因为只需要功能函数）
-  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories, accessToken, uploadFile } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1, { autoInitialize: false });
+  const { createRecord, deleteRecord, updateRecord, getCategoryByName, categories, accessToken, uploadFile, findSimilarCategory } = useFeishuApi(new Date().getFullYear(), new Date().getMonth() + 1, { autoInitialize: false });
 
   // 分类选择状态
   const [showCategorySelector, setShowCategorySelector] = useState(false);
@@ -108,6 +108,49 @@ const RecordDetail = ({ route, navigation }) => {
     // 新记录使用默认分类
     return undefined
   });
+
+  // 智能推荐状态
+  const [recommendedCategory, setRecommendedCategory] = useState(null);
+
+  // 监听备注变化，进行智能推荐
+  useEffect(() => {
+    const currentCategory = formData.category;
+    console.log('智能推荐检查 - category:', currentCategory, 'description:', formData.description);
+
+    // 触发条件：
+    // 1. 分类为空、"请选择分类"、"其它" 或 "其他" (支持包含图标的情况)
+    // 2. 备注不为空
+    const isUnspecifiedCategory = !currentCategory ||
+      currentCategory === '请选择分类' ||
+      currentCategory.includes('其它') ||
+      currentCategory.includes('其他');
+
+    if (isUnspecifiedCategory && formData.description) {
+      console.log('满足触发条件，开始查找相似分类...');
+      const recommendation = findSimilarCategory(formData.description);
+      if (recommendation) {
+        console.log('找到推荐分类:', recommendation);
+        setRecommendedCategory(recommendation);
+      } else {
+        console.log('未找到推荐分类');
+        setRecommendedCategory(null);
+      }
+    } else {
+      setRecommendedCategory(null);
+    }
+  }, [formData.description, formData.category]);
+
+  // 应用推荐分类
+  const applyRecommendation = () => {
+    if (recommendedCategory) {
+      setFormData(prev => ({
+        ...prev,
+        category: recommendedCategory.name,
+        icon: recommendedCategory.icon
+      }));
+      setRecommendedCategory(null);
+    }
+  };
 
   console.log('RecordDetail - record:', record);
   console.log('RecordDetail - formData:', formData);
@@ -564,12 +607,10 @@ const RecordDetail = ({ route, navigation }) => {
 
         if (result.success) {
           console.log('保存成功!');
-          // 刷新当前月份的数据
-          if (refreshMonthDataForDate) {
-            // 延迟2000ms执行，确保其他操作完成
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            refreshMonthDataForDate(passedSelectedDate);
-          }
+          // 全局缓存已更新，无需强制刷新网络请求
+          // if (refreshMonthDataForDate) {
+          //   refreshMonthDataForDate(passedSelectedDate);
+          // }
 
           Alert.alert(
             '保存成功',
@@ -623,12 +664,10 @@ const RecordDetail = ({ route, navigation }) => {
         if (result.success) {
           console.log('更新成功!');
 
-          // 刷新当前月份的数据
-          if (refreshMonthDataForDate) {
-            // 延迟1000ms执行，确保其他操作完成
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            refreshMonthDataForDate(passedSelectedDate);
-          }
+          // 全局缓存已更新，无需强制刷新网络请求
+          // if (refreshMonthDataForDate) {
+          //   refreshMonthDataForDate(passedSelectedDate);
+          // }
 
           Alert.alert(
             '更新成功',
@@ -773,6 +812,22 @@ const RecordDetail = ({ route, navigation }) => {
             <Text style={styles.categoryArrow}>›</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 智能推荐提示 */}
+        {recommendedCategory && (
+          <TouchableOpacity
+            style={styles.recommendationContainer}
+            onPress={applyRecommendation}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.recommendationIcon}>💡</Text>
+            <Text style={styles.recommendationText}>
+              根据备注推荐：
+              <Text style={styles.recommendationHighlight}>{recommendedCategory.icon} {recommendedCategory.name}</Text>
+            </Text>
+            <Text style={styles.recommendationAction}>点击应用</Text>
+          </TouchableOpacity>
+        )}
 
         {/* 表单字段 */}
         <View style={styles.formSection}>
@@ -1495,6 +1550,35 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+
+  // 智能推荐样式
+  recommendationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary[50],
+    marginHorizontal: theme.spacing.lg,
+    marginTop: theme.spacing.sm,
+    padding: theme.spacing.sm,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.primary[200],
+  },
+  recommendationIcon: {
+    fontSize: 16,
+    marginRight: theme.spacing.xs,
+  },
+  recommendationText: {
+    ...typographyUtils.getTextStyle('caption', colors.neutral[600]),
+    flex: 1,
+  },
+  recommendationHighlight: {
+    color: colors.primary[700],
+    fontWeight: '600',
+  },
+  recommendationAction: {
+    ...typographyUtils.getTextStyle('caption', colors.primary[600]),
+    fontWeight: '600',
   },
 });
 
