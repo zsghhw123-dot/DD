@@ -20,7 +20,7 @@ const ActivitiesScreen = ({ navigation }) => {
   const [pickerMonth, setPickerMonth] = useState(month);
   const [searchFocused, setSearchFocused] = useState(false);
   const monthKey = getMonthKey(year, month);
-  const monthData = dataCache[monthKey] || {};
+  const monthData = dataCache[monthKey]?.data || {};
   const hasData = Object.keys(monthData).length > 0;
   const [initialLoadDone, setInitialLoadDone] = useState(false);
 
@@ -46,7 +46,7 @@ const ActivitiesScreen = ({ navigation }) => {
     const list = [];
     monthsInRange.forEach(({ y, m }) => {
       const monthKey = getMonthKey(y, m);
-      const monthData = dataCache[monthKey] || {};
+      const monthData = dataCache[monthKey]?.data || {};
       Object.keys(monthData).forEach((day) => {
         const dayActs = monthData[day]?.activities || [];
         dayActs.forEach((act) => list.push(act));
@@ -193,26 +193,26 @@ const ActivitiesScreen = ({ navigation }) => {
             <Text style={styles.loadingText}>正在加载数据…</Text>
           </View>
         ) : (
-        <ScrollView
-          style={styles.list}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing || (isLoading && initialLoadDone)}
-              onRefresh={async () => {
-                setRefreshing(true);
-                try {
-                  await refreshMonthDataForDate(new Date(year, month - 1, 1));
-                } finally {
-                  setRefreshing(false);
-                }
-              }}
-              tintColor={colors.primary[500]}
-              colors={[colors.primary[500]]}
-            />
-          }
-        >
+          <ScrollView
+            style={styles.list}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing || (isLoading && initialLoadDone)}
+                onRefresh={async () => {
+                  setRefreshing(true);
+                  try {
+                    await refreshMonthDataForDate(new Date(year, month - 1, 1));
+                  } finally {
+                    setRefreshing(false);
+                  }
+                }}
+                tintColor={colors.primary[500]}
+                colors={[colors.primary[500]]}
+              />
+            }
+          >
             {filteredRecords.map((record) => (
               <RecordItem
                 key={record.id}
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
   },
   listContent: {
-    paddingBottom: theme.spacing.lg*2,
+    paddingBottom: theme.spacing.lg * 2,
   },
   searchBar: {
     marginHorizontal: theme.spacing.md,

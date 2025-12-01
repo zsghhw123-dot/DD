@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // 创建全局数据上下文
 const GlobalDataContext = createContext(null);
+
+// 配置常量
+const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24小时过期
+const STORAGE_KEY = '@record_app_cache';
+const CATEGORIES_STORAGE_KEY = '@record_app_categories';
+const ACCESS_TOKEN_KEY = '@record_app_token';
+const DEBOUNCE_DELAY = 500; // 防抖延迟(ms)
 
 // 工具函数：提取表情符号
 const extractEmojis = (text) => {
@@ -80,6 +88,15 @@ const convertToActivityData = (records, categories = []) => {
     return newActivityData;
 };
 
+// 防抖函数
+const debounce = (func, delay) => {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func(...args), delay);
+    };
+};
+
 // GlobalDataProvider 组件
 export const GlobalDataProvider = ({ children }) => {
     // 全局状态
@@ -88,6 +105,95 @@ export const GlobalDataProvider = ({ children }) => {
     const [categories, setCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const isInitialized = useRef(false);
+    const saveTimeoutRef = useRef(null);
+
+    // ========== 持久化存储方法 ==========
+
+    // 保存缓存到 AsyncStorage（带防抖）
+    const saveCacheToStorage = useCallback(
+        debounce(async (cache) => {
+            try {
+                await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(cache));
+                console.log('💾 缓存已保存到存储');
+            } catch (error) {
+                console.error('保存缓存失败:', error);
+            }
+        }, DEBOUNCE_DELAY),
+        []
+    );
+
+    // 从 AsyncStorage 加载缓存
+    const loadCacheFromStorage = async () => {
+        try {
+            const cached = await AsyncStorage.getItem(STORAGE_KEY);
+            if (cached) {
+                const parsedCache = JSON.parse(cached);
+                console.log('📦 从存储中恢复缓存:', Object.keys(parsedCache));
+                return parsedCache;
+            }
+            return {};
+        } catch (error) {
+            console.error('加载缓存失败:', error);
+            return {};
+        }
+    };
+
+    // 保存分类到 AsyncStorage
+    const saveCategoriesToStorage = async (cats) => {
+        try {
+            await AsyncStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(cats));
+        } catch (error) {
+            console.error('保存分类失败:', error);
+        }
+    };
+
+    // 从 AsyncStorage 加载分类
+    const loadCategoriesFromStorage = async () => {
+        try {
+            const cached = await AsyncStorage.getItem(CATEGORIES_STORAGE_KEY);
+            return cached ? JSON.parse(cached) : null;
+        } catch (error) {
+            console.error('加载分类失败:', error);
+            return null;
+        }
+    };
+
+    // 保存 token 到 AsyncStorage
+    const saveTokenToStorage = async (token) => {
+        try {
+            await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
+        } catch (error) {
+            console.error('保存token失败:', error);
+        }
+    };
+
+    // 从 AsyncStorage 加载 token
+    const loadTokenFromStorage = async () => {
+        try {
+            return await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+        } catch (error) {
+            console.error('加载token失败:', error);
+            return null;
+        }
+    };
+
+    // ========== 缓存过期检查 ==========
+
+    // 检查缓存项是否过期
+    const isCacheExpired = (timestamp) => {
+        if (!timestamp) return true;
+        return Date.now() - timestamp > CACHE_EXPIRY_MS;
+    };
+
+    // 获取所有过期的缓存键
+    const getExpiredKeys = (cache) => {
+        return Object.keys(cache).filter(key => {
+            const cacheEntry = cache[key];
+            return cacheEntry.timestamp && isCacheExpired(cacheEntry.timestamp);
+        });
+    };
+
+    // ========== 飞书API方法 ==========
 
     // 获取飞书 tenant_access_token
     const getTenantAccessToken = async () => {
@@ -105,11 +211,11 @@ export const GlobalDataProvider = ({ children }) => {
             });
 
             const data = await response.json();
-            console.log('飞书API响应:', data);
 
             if (data.tenant_access_token) {
-                console.log('tenant_access_token:', data.tenant_access_token);
+                console.log('✅ 获取到 tenant_access_token');
                 setAccessToken(data.tenant_access_token);
+                await saveTokenToStorage(data.tenant_access_token);
                 return data.tenant_access_token;
             } else {
                 console.log('获取tenant_access_token失败:', data);
@@ -141,7 +247,6 @@ export const GlobalDataProvider = ({ children }) => {
             });
 
             const data = await response.json();
-            console.log('分类数据请求响应:', data);
 
             if (response.ok && data.data && data.data.items) {
                 const formattedCategories = data.data.items.map(item => ({
@@ -152,8 +257,9 @@ export const GlobalDataProvider = ({ children }) => {
                     isShow: item.fields.是否展示 || '是'
                 }));
 
-                console.log('转换后的分类数据:', formattedCategories);
+                console.log('✅ 分类数据获取成功');
                 setCategories(formattedCategories);
+                await saveCategoriesToStorage(formattedCategories);
                 return formattedCategories;
             } else {
                 console.error('获取分类数据失败:', data);
@@ -200,11 +306,9 @@ export const GlobalDataProvider = ({ children }) => {
 
             if (response.ok) {
                 const recordsData = await response.json();
-                console.log(`${year}年${month}月 Bitable数据:`, recordsData);
 
                 if (recordsData.data && recordsData.data.items) {
                     const convertedData = convertToActivityData(recordsData.data.items, categoriesList);
-                    console.log(`${year}年${month}月 转换后数据:`, convertedData);
                     return convertedData;
                 }
             } else {
@@ -216,7 +320,7 @@ export const GlobalDataProvider = ({ children }) => {
         return {};
     };
 
-    // 批量获取多个月份的数据
+    // 批量获取多个月份的数据（带时间戳）
     const fetchMultipleMonths = async (token, months, categoriesList = []) => {
         setIsLoading(true);
         const newCache = { ...dataCache };
@@ -225,26 +329,35 @@ export const GlobalDataProvider = ({ children }) => {
             const promises = months.map(async ({ year, month }) => {
                 const monthKey = getMonthKey(year, month);
 
-                // 如果缓存中已有数据，跳过请求
-                if (newCache[monthKey]) {
-                    console.log(`缓存命中: ${monthKey}`);
-                    return { monthKey, data: newCache[monthKey] };
+                // 检查缓存
+                const cachedEntry = newCache[monthKey];
+                if (cachedEntry && cachedEntry.data && !isCacheExpired(cachedEntry.timestamp)) {
+                    console.log(`✅ 缓存命中且未过期: ${monthKey}`);
+                    return { monthKey, data: cachedEntry.data, timestamp: cachedEntry.timestamp };
                 }
 
-                console.log(`正在获取: ${monthKey}`);
+                if (cachedEntry && cachedEntry.data && isCacheExpired(cachedEntry.timestamp)) {
+                    console.log(`⏰ 缓存过期，刷新: ${monthKey}`);
+                } else {
+                    console.log(`📡 正在获取: ${monthKey}`);
+                }
+
                 const data = await getBitableRecords(token, year, month, categoriesList);
-                return { monthKey, data };
+                return { monthKey, data, timestamp: Date.now() };
             });
 
             const results = await Promise.all(promises);
 
-            // 更新缓存
-            results.forEach(({ monthKey, data }) => {
-                newCache[monthKey] = data;
+            // 更新缓存（带时间戳）
+            results.forEach(({ monthKey, data, timestamp }) => {
+                newCache[monthKey] = {
+                    data,
+                    timestamp
+                };
             });
 
             setDataCache(newCache);
-            console.log('全局数据缓存已更新:', Object.keys(newCache));
+            console.log('✅ 全局数据缓存已更新');
 
         } catch (error) {
             console.error('批量获取数据时出错:', error);
@@ -253,32 +366,75 @@ export const GlobalDataProvider = ({ children }) => {
         }
     };
 
-    // 初始化数据（只在应用首次启动时调用）
+    // 初始化数据（带持久化和过期检查）
     const initializeData = async (year, month) => {
         if (isInitialized.current) {
             console.log('数据已初始化，跳过重复初始化');
             return;
         }
 
-        console.log('🚀 全局数据初始化开始...', { year, month });
+        console.log('🚀 全局数据初始化开始...');
         isInitialized.current = true;
 
         try {
-            // 获取访问令牌
-            const token = await getTenantAccessToken();
+            // 1. 先加载持久化缓存
+            const cachedData = await loadCacheFromStorage();
+            const cachedCategories = await loadCategoriesFromStorage();
+            const cachedToken = await loadTokenFromStorage();
+
+            if (Object.keys(cachedData).length > 0) {
+                setDataCache(cachedData);
+            }
+
+            if (cachedCategories) {
+                setCategories(cachedCategories);
+            }
+
+            if (cachedToken) {
+                setAccessToken(cachedToken);
+            }
+
+            // 2. 获取新的 token 和分类（如果需要）
+            const token = cachedToken || await getTenantAccessToken();
             if (!token) {
                 console.error('初始化失败：无法获取访问令牌');
                 isInitialized.current = false;
                 return;
             }
 
-            // 获取分类数据
-            const categoriesList = await fetchCategories(token);
+            const categoriesList = cachedCategories || await fetchCategories(token);
 
-            // 获取当前月及前后3个月的数据（共7个月）
+            // 3. 检查过期数据
+            const expiredKeys = getExpiredKeys(cachedData);
+            if (expiredKeys.length > 0) {
+                console.log('⏰ 发现过期数据:', expiredKeys);
+            }
+
+            // 4. 获取当前需要的月份
             const months = getMonthRange(year, month, 3);
-            console.log('准备获取的月份:', months);
-            await fetchMultipleMonths(token, months, categoriesList);
+            const missingMonths = months.filter(({ year: y, month: m }) => {
+                const key = getMonthKey(y, m);
+                return !cachedData[key] || !cachedData[key].data;
+            });
+
+            // 5. 合并缺失和过期的数据
+            const expiredMonths = expiredKeys.map(key => {
+                const [y, m] = key.split('-').map(Number);
+                return { year: y, month: m };
+            });
+
+            const monthsToLoad = [
+                ...missingMonths,
+                ...expiredMonths.filter(({ year: y, month: m }) => {
+                    return !missingMonths.some(missing => missing.year === y && missing.month === m);
+                })
+            ];
+
+            // 6. 加载缺失和过期的数据
+            if (monthsToLoad.length > 0) {
+                console.log('📥 需要加载的月份:', monthsToLoad.map(({ year: y, month: m }) => `${y}-${m}`));
+                await fetchMultipleMonths(token, monthsToLoad, categoriesList);
+            }
 
             console.log('✅ 全局数据初始化完成');
         } catch (error) {
@@ -290,7 +446,8 @@ export const GlobalDataProvider = ({ children }) => {
     // 从缓存获取月份数据
     const getMonthData = (year, month) => {
         const monthKey = getMonthKey(year, month);
-        return dataCache[monthKey] || {};
+        const cacheEntry = dataCache[monthKey];
+        return cacheEntry?.data || {};
     };
 
     // 强制刷新指定月份数据
@@ -301,18 +458,21 @@ export const GlobalDataProvider = ({ children }) => {
         }
 
         try {
-            console.log(`刷新${year}年${month}月数据`);
+            console.log(`🔄 刷新${year}年${month}月数据`);
             setIsLoading(true);
 
             const data = await getBitableRecords(accessToken, year, month, categories);
 
-            // 更新缓存
+            // 更新缓存（带时间戳）
             const monthKey = getMonthKey(year, month);
             const newCache = { ...dataCache };
-            newCache[monthKey] = data;
+            newCache[monthKey] = {
+                data,
+                timestamp: Date.now()
+            };
             setDataCache(newCache);
 
-            console.log(`${year}年${month}月数据刷新完成`);
+            console.log(`✅ ${year}年${month}月数据刷新完成`);
         } catch (error) {
             console.error('刷新月份数据时出错:', error);
         } finally {
@@ -326,23 +486,29 @@ export const GlobalDataProvider = ({ children }) => {
         const newCache = { ...dataCache };
 
         if (!newCache[monthKey]) {
-            newCache[monthKey] = {};
+            newCache[monthKey] = {
+                data: {},
+                timestamp: Date.now()
+            };
         }
 
-        if (!newCache[monthKey][day]) {
-            newCache[monthKey][day] = { icon: [], activities: [] };
+        if (!newCache[monthKey].data[day]) {
+            newCache[monthKey].data[day] = { icon: [], activities: [] };
         }
 
         // 添加新活动
-        newCache[monthKey][day].activities.push(newActivity);
+        newCache[monthKey].data[day].activities.push(newActivity);
 
         // 更新图标
-        if (newActivity.icon && !newCache[monthKey][day].icon.includes(newActivity.icon)) {
-            newCache[monthKey][day].icon.push(newActivity.icon);
+        if (newActivity.icon && !newCache[monthKey].data[day].icon.includes(newActivity.icon)) {
+            newCache[monthKey].data[day].icon.push(newActivity.icon);
         }
 
+        // 更新时间戳
+        newCache[monthKey].timestamp = Date.now();
+
         setDataCache(newCache);
-        console.log('缓存已更新 - 创建记录:', { year, month, day });
+        console.log('✅ 缓存已更新 - 创建记录');
     };
 
     // 删除记录后更新缓存
@@ -350,25 +516,28 @@ export const GlobalDataProvider = ({ children }) => {
         const monthKey = getMonthKey(year, month);
         const newCache = { ...dataCache };
 
-        if (newCache[monthKey]?.[day]) {
+        if (newCache[monthKey]?.data?.[day]) {
             // 删除活动
-            newCache[monthKey][day].activities = newCache[monthKey][day].activities.filter(
+            newCache[monthKey].data[day].activities = newCache[monthKey].data[day].activities.filter(
                 activity => activity.id !== recordId
             );
 
             // 重新计算图标
             const remainingIcons = [...new Set(
-                newCache[monthKey][day].activities.map(activity => activity.icon).filter(Boolean)
+                newCache[monthKey].data[day].activities.map(activity => activity.icon).filter(Boolean)
             )];
-            newCache[monthKey][day].icon = remainingIcons;
+            newCache[monthKey].data[day].icon = remainingIcons;
 
             // 如果该日期没有活动了，删除该日期
-            if (newCache[monthKey][day].activities.length === 0) {
-                delete newCache[monthKey][day];
+            if (newCache[monthKey].data[day].activities.length === 0) {
+                delete newCache[monthKey].data[day];
             }
 
+            // 更新时间戳
+            newCache[monthKey].timestamp = Date.now();
+
             setDataCache(newCache);
-            console.log('缓存已更新 - 删除记录:', { year, month, day, recordId });
+            console.log('✅ 缓存已更新 - 删除记录');
         }
     };
 
@@ -377,26 +546,29 @@ export const GlobalDataProvider = ({ children }) => {
         const monthKey = getMonthKey(year, month);
         const newCache = { ...dataCache };
 
-        if (newCache[monthKey]?.[day]) {
+        if (newCache[monthKey]?.data?.[day]) {
             // 更新活动
-            const activityIndex = newCache[monthKey][day].activities.findIndex(
+            const activityIndex = newCache[monthKey].data[day].activities.findIndex(
                 activity => activity.id === recordId
             );
 
             if (activityIndex !== -1) {
-                newCache[monthKey][day].activities[activityIndex] = {
-                    ...newCache[monthKey][day].activities[activityIndex],
+                newCache[monthKey].data[day].activities[activityIndex] = {
+                    ...newCache[monthKey].data[day].activities[activityIndex],
                     ...updatedActivity
                 };
 
                 // 重新计算图标
                 const icons = [...new Set(
-                    newCache[monthKey][day].activities.map(activity => activity.icon).filter(Boolean)
+                    newCache[monthKey].data[day].activities.map(activity => activity.icon).filter(Boolean)
                 )];
-                newCache[monthKey][day].icon = icons;
+                newCache[monthKey].data[day].icon = icons;
+
+                // 更新时间戳
+                newCache[monthKey].timestamp = Date.now();
 
                 setDataCache(newCache);
-                console.log('缓存已更新 - 更新记录:', { year, month, day, recordId });
+                console.log('✅ 缓存已更新 - 更新记录');
             }
         }
     };
@@ -439,12 +611,40 @@ export const GlobalDataProvider = ({ children }) => {
     // 确保缓存有指定月份的数据
     const ensureMonthData = async (year, month) => {
         const monthKey = getMonthKey(year, month);
+        const cacheEntry = dataCache[monthKey];
 
-        if (!dataCache[monthKey] && accessToken) {
-            console.log(`缓存未命中，加载 ${monthKey}`);
-            await fetchMultipleMonths(accessToken, [{ year, month }], categories);
+        if (!cacheEntry || !cacheEntry.data || isCacheExpired(cacheEntry.timestamp)) {
+            if (accessToken) {
+                console.log(`📥 加载/刷新: ${monthKey}`);
+                await fetchMultipleMonths(accessToken, [{ year, month }], categories);
+            }
         }
     };
+
+    // 清除所有缓存（用于设置页面）
+    const clearAllCache = async () => {
+        try {
+            await AsyncStorage.multiRemove([STORAGE_KEY, CATEGORIES_STORAGE_KEY, ACCESS_TOKEN_KEY]);
+            setDataCache({});
+            setCategories([]);
+            setAccessToken(null);
+            isInitialized.current = false;
+            console.log('🗑️ 所有缓存已清除');
+            return { success: true };
+        } catch (error) {
+            console.error('清除缓存失败:', error);
+            return { success: false, error: error.message };
+        }
+    };
+
+    // ========== 副作用：监听变化并保存 ==========
+
+    // 监听缓存变化并保存
+    useEffect(() => {
+        if (Object.keys(dataCache).length > 0) {
+            saveCacheToStorage(dataCache);
+        }
+    }, [dataCache, saveCacheToStorage]);
 
     // Context value
     const value = {
@@ -466,6 +666,7 @@ export const GlobalDataProvider = ({ children }) => {
         preloadRange,
         ensureMonthData,
         getMonthKey,
+        clearAllCache,
 
         // API 方法
         getTenantAccessToken,

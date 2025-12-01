@@ -38,7 +38,7 @@ export const useFeishuApi = (currentYear, currentMonth, options = {}) => {
       const monthData = getMonthData(currentYear, currentMonth);
       setActivityData(monthData);
 
-      // 确保该月数据已加载（如果缓存中没有，则加载）
+      // 确保该月数据已加载（如果缓存中没有或过期，则加载）
       ensureMonthData(currentYear, currentMonth);
     }
   }, [currentYear, currentMonth, dataCache]);

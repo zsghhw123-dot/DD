@@ -13,7 +13,7 @@ const StatsScreen = () => {
   const { dataCache, getMonthKey, isLoading, refreshMonthDataForDate, preloadYearData, categories } = useFeishuApi(year, month, { autoInitialize: false });
   const [refreshing, setRefreshing] = useState(false);
   const currentMonthKey = getMonthKey(year, month);
-  const currentMonthData = dataCache[currentMonthKey] || {};
+  const currentMonthData = dataCache[currentMonthKey]?.data || {};
   const hasData = Object.keys(currentMonthData).length > 0;
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('全部');
@@ -62,7 +62,7 @@ const StatsScreen = () => {
 
   const chartData = useMemo(() => {
     const monthKey = getMonthKey(year, month);
-    const monthData = dataCache[monthKey] || {};
+    const monthData = dataCache[monthKey]?.data || {};
     const totals = {};
     Object.keys(monthData).forEach((day) => {
       const dayActs = monthData[day]?.activities || [];
@@ -82,7 +82,7 @@ const StatsScreen = () => {
 
   const monthlyMetrics = useMemo(() => {
     const monthKey = getMonthKey(year, month);
-    const monthData = dataCache[monthKey] || {};
+    const monthData = dataCache[monthKey]?.data || {};
     let total = 0;
     let daysWithSpend = 0;
     Object.keys(monthData).forEach((day) => {
@@ -115,7 +115,7 @@ const StatsScreen = () => {
 
   const dailyData = useMemo(() => {
     const monthKey = getMonthKey(year, month);
-    const monthData = dataCache[monthKey] || {};
+    const monthData = dataCache[monthKey]?.data || {};
     const daysInMonth = new Date(year, month, 0).getDate();
     const now = new Date();
     const isCurrentMonth = now.getFullYear() === year && (now.getMonth() + 1) === month;
@@ -140,7 +140,7 @@ const StatsScreen = () => {
     Object.keys(dataCache).forEach((key) => {
       if (key.startsWith(prefix)) {
         const m = Number(key.split('-')[1]);
-        const monthData = dataCache[key] || {};
+        const monthData = dataCache[key]?.data || {};
         let sum = 0;
         Object.keys(monthData).forEach((day) => {
           const acts = monthData[day]?.activities || [];
@@ -166,7 +166,7 @@ const StatsScreen = () => {
     Object.keys(dataCache).forEach((key) => {
       if (key.startsWith(prefix)) {
         const m = Number(key.split('-')[1]);
-        const monthData = dataCache[key] || {};
+        const monthData = dataCache[key]?.data || {};
         Object.keys(monthData).forEach((day) => {
           const acts = monthData[day]?.activities || [];
           acts.forEach((act) => {
@@ -186,7 +186,7 @@ const StatsScreen = () => {
 
   const categoryOptions = useMemo(() => {
     const monthKey = getMonthKey(year, month);
-    const monthData = dataCache[monthKey] || {};
+    const monthData = dataCache[monthKey]?.data || {};
     const totals = {};
     Object.keys(monthData).forEach((day) => {
       const acts = monthData[day]?.activities || [];

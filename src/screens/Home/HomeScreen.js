@@ -68,7 +68,7 @@ export default function HomeScreen({ navigation }) {
       const month = selectedDate.getMonth() + 1;
       const year = selectedDate.getFullYear();
       const monthKey = getMonthKey(year, month);
-      const dayActivities = dataCache[monthKey]?.[day]?.activities || [];
+      const dayActivities = dataCache[monthKey]?.data?.[day]?.activities || [];
 
       //   const dayActivities = activityData[day]?.activities || [];
       setSelectedDateData(dayActivities);
