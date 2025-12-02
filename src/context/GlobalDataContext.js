@@ -273,6 +273,7 @@ export const GlobalDataProvider = ({ children }) => {
 
     // 获取单个月份的数据
     const getBitableRecords = async (token, year, month, categoriesList = []) => {
+        debugger
         try {
             const response = await fetch('https://open.feishu.cn/open-apis/bitable/v1/apps/MhlTb2tO1a5IoOsE9r3cGIuqnmg/tables/tblzIfSGDegyUzTc/records/search', {
                 method: 'POST',
@@ -317,7 +318,7 @@ export const GlobalDataProvider = ({ children }) => {
         } catch (error) {
             console.error(`获取${year}年${month}月数据时出错:`, error);
         }
-        return {};
+        return null; // 失败时返回 null，而不是空对象，避免覆盖缓存
     };
 
     // 批量获取多个月份的数据（带时间戳）
@@ -350,10 +351,14 @@ export const GlobalDataProvider = ({ children }) => {
 
             // 更新缓存（带时间戳）
             results.forEach(({ monthKey, data, timestamp }) => {
-                newCache[monthKey] = {
-                    data,
-                    timestamp
-                };
+                if (data) {
+                    newCache[monthKey] = {
+                        data,
+                        timestamp
+                    };
+                } else {
+                    console.warn(`⚠️ ${monthKey} 数据获取失败，跳过缓存更新`);
+                }
             });
 
             setDataCache(newCache);
@@ -463,16 +468,19 @@ export const GlobalDataProvider = ({ children }) => {
 
             const data = await getBitableRecords(accessToken, year, month, categories);
 
-            // 更新缓存（带时间戳）
-            const monthKey = getMonthKey(year, month);
-            const newCache = { ...dataCache };
-            newCache[monthKey] = {
-                data,
-                timestamp: Date.now()
-            };
-            setDataCache(newCache);
-
-            console.log(`✅ ${year}年${month}月数据刷新完成`);
+            if (data) {
+                // 更新缓存（带时间戳）
+                const monthKey = getMonthKey(year, month);
+                const newCache = { ...dataCache };
+                newCache[monthKey] = {
+                    data,
+                    timestamp: Date.now()
+                };
+                setDataCache(newCache);
+                console.log(`✅ ${year}年${month}月数据刷新完成`);
+            } else {
+                console.error(`❌ ${year}年${month}月数据刷新失败，保留原有缓存`);
+            }
         } catch (error) {
             console.error('刷新月份数据时出错:', error);
         } finally {
