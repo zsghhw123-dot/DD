@@ -5,10 +5,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const GlobalDataContext = createContext(null);
 
 // 配置常量
-const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24小时过期
+// 配置常量
+const CACHE_EXPIRY_MS = 20 * 60 * 1000; // 20分钟过期
 const STORAGE_KEY = '@record_app_cache';
 const CATEGORIES_STORAGE_KEY = '@record_app_categories';
-const ACCESS_TOKEN_KEY = '@record_app_token';
+const ACCESS_TOKEN_KEY = '@record_app_token_v2'; // 更新key以区分旧版本
 const DEBOUNCE_DELAY = 500; // 防抖延迟(ms)
 
 // 工具函数：提取表情符号
@@ -158,19 +159,32 @@ export const GlobalDataProvider = ({ children }) => {
         }
     };
 
-    // 保存 token 到 AsyncStorage
+    // 保存 token 到 AsyncStorage (带时间戳)
     const saveTokenToStorage = async (token) => {
         try {
-            await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
+            const tokenData = {
+                token,
+                timestamp: Date.now()
+            };
+            await AsyncStorage.setItem(ACCESS_TOKEN_KEY, JSON.stringify(tokenData));
         } catch (error) {
             console.error('保存token失败:', error);
         }
     };
 
-    // 从 AsyncStorage 加载 token
+    // 从 AsyncStorage 加载 token (检查过期)
     const loadTokenFromStorage = async () => {
         try {
-            return await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+            const cached = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+            if (cached) {
+                const { token, timestamp } = JSON.parse(cached);
+                // 检查 token 是否过期 (同样使用 20 分钟有效期)
+                if (Date.now() - timestamp < CACHE_EXPIRY_MS) {
+                    return token;
+                }
+                console.log('⏰ Token 已过期');
+            }
+            return null;
         } catch (error) {
             console.error('加载token失败:', error);
             return null;
