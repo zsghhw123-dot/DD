@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 
 // 创建全局数据上下文
 const GlobalDataContext = createContext(null);
@@ -643,12 +645,54 @@ export const GlobalDataProvider = ({ children }) => {
         }
     };
 
-    // 根据备注查找相似分类
+    // 根据备注查找相似分类（增强版）
     const findSimilarCategory = (description) => {
         if (!description || description.length < 2) return null;
 
-        const searchDesc = description.trim();
+        const searchDesc = description.trim().toLowerCase();
         const categoryStats = {};
+
+        // 辅助函数：计算字符串相似度（Jaro-Winkler 简化版）
+        const calculateSimilarity = (str1, str2) => {
+            const s1 = str1.toLowerCase();
+            const s2 = str2.toLowerCase();
+
+            // 完全匹配
+            if (s1 === s2) return 1.0;
+
+            // 包含匹配
+            if (s1.includes(s2) || s2.includes(s1)) {
+                const shorter = s1.length < s2.length ? s1 : s2;
+                const longer = s1.length >= s2.length ? s1 : s2;
+                return 0.7 + (0.3 * shorter.length / longer.length);
+            }
+
+            // 计算公共子串长度
+            let maxCommonLength = 0;
+            for (let i = 0; i < s1.length; i++) {
+                for (let j = 0; j < s2.length; j++) {
+                    let k = 0;
+                    while (i + k < s1.length && j + k < s2.length && s1[i + k] === s2[j + k]) {
+                        k++;
+                    }
+                    maxCommonLength = Math.max(maxCommonLength, k);
+                }
+            }
+
+            const avgLength = (s1.length + s2.length) / 2;
+            return maxCommonLength / avgLength;
+        };
+
+        // 辅助函数：提取关键词（简单分词）
+        const extractKeywords = (text) => {
+            // 移除标点符号，按空格和常见分隔符分割
+            const cleanText = text.toLowerCase().replace(/[，。！？、；：""''（）【】《》]/g, ' ');
+            const words = cleanText.split(/\s+/).filter(w => w.length >= 2);
+            return words;
+        };
+
+        // 提取搜索词的关键词
+        const searchKeywords = extractKeywords(searchDesc);
 
         // 遍历所有缓存数据
         Object.values(dataCache).forEach(monthCache => {
@@ -662,42 +706,85 @@ export const GlobalDataProvider = ({ children }) => {
 
                     const actDesc = activity.description.trim();
 
-                    // 匹配策略：
-                    // 1. 完全匹配
-                    // 2. 包含匹配 (输入包含记录备注，或记录备注包含输入)
-                    if (actDesc === searchDesc || actDesc.includes(searchDesc) || searchDesc.includes(actDesc)) {
-                        const key = `${activity.icon}|${activity.title}`;
-                        if (!categoryStats[key]) {
-                            categoryStats[key] = {
-                                count: 0,
-                                icon: activity.icon,
-                                name: activity.title,
-                                // 完全匹配权重更高
-                                weight: actDesc === searchDesc ? 2 : 1
-                            };
+                    // 计算相似度
+                    let similarity = calculateSimilarity(searchDesc, actDesc);
+
+                    // 关键词匹配加分
+                    const actKeywords = extractKeywords(actDesc);
+                    let keywordMatchCount = 0;
+                    searchKeywords.forEach(searchWord => {
+                        if (actKeywords.some(actWord =>
+                            actWord.includes(searchWord) || searchWord.includes(actWord)
+                        )) {
+                            keywordMatchCount++;
                         }
-                        categoryStats[key].count += 1;
-                        categoryStats[key].weight += (actDesc === searchDesc ? 2 : 1);
+                    });
+
+                    // 如果有关键词匹配，提升相似度
+                    if (keywordMatchCount > 0 && searchKeywords.length > 0) {
+                        const keywordBonus = (keywordMatchCount / searchKeywords.length) * 0.3;
+                        similarity = Math.min(1.0, similarity + keywordBonus);
                     }
+
+                    // 只保留相似度超过阈值的记录
+                    if (similarity < 0.3) return;
+
+                    // 时间衰减：最近的记录权重更高
+                    let timeWeight = 1.0;
+                    if (activity.fields?.日期) {
+                        const daysSinceActivity = (Date.now() - activity.fields.日期) / (1000 * 60 * 60 * 24);
+                        // 30天内的记录保持满权重，之后逐渐衰减
+                        if (daysSinceActivity > 30) {
+                            timeWeight = Math.max(0.5, 1.0 - (daysSinceActivity - 30) / 365);
+                        }
+                    }
+
+                    // 计算最终得分
+                    const score = similarity * timeWeight;
+
+                    const key = `${activity.icon}|${activity.title}`;
+                    if (!categoryStats[key]) {
+                        categoryStats[key] = {
+                            icon: activity.icon,
+                            name: activity.title,
+                            totalScore: 0,
+                            count: 0,
+                            maxSimilarity: 0
+                        };
+                    }
+
+                    categoryStats[key].totalScore += score;
+                    categoryStats[key].count += 1;
+                    categoryStats[key].maxSimilarity = Math.max(categoryStats[key].maxSimilarity, similarity);
                 });
             });
         });
 
-        // 找出权重最高的分类
+        // 找出得分最高的分类
         let bestMatch = null;
-        let maxWeight = 0;
+        let maxScore = 0;
 
         Object.values(categoryStats).forEach(stat => {
-            if (stat.weight > maxWeight) {
-                maxWeight = stat.weight;
+            // 综合得分 = 平均分 * 出现次数的对数 + 最大相似度
+            const finalScore = (stat.totalScore / stat.count) * Math.log(stat.count + 1) + stat.maxSimilarity * 0.3;
+
+            if (finalScore > maxScore) {
+                maxScore = finalScore;
                 bestMatch = {
                     icon: stat.icon,
-                    name: stat.name
+                    name: stat.name,
+                    confidence: Math.min(1.0, finalScore) // 置信度
                 };
             }
         });
 
-        return bestMatch;
+        // 只返回置信度足够高的结果
+        if (bestMatch && bestMatch.confidence >= 0.4) {
+            console.log(`🎯 智能推荐: ${bestMatch.name} (置信度: ${(bestMatch.confidence * 100).toFixed(1)}%)`);
+            return bestMatch;
+        }
+
+        return null;
     };
 
     // 清除所有缓存（用于设置页面）
@@ -712,6 +799,127 @@ export const GlobalDataProvider = ({ children }) => {
             return { success: true };
         } catch (error) {
             console.error('清除缓存失败:', error);
+            return { success: false, error: error.message };
+        }
+    };
+
+    // 导出数据为 CSV 格式
+    const exportDataToCSV = async () => {
+        try {
+            console.log('🔄 开始导出数据...');
+
+            // CSV 转义函数
+            const escapeCSV = (value) => {
+                if (value === null || value === undefined) return '';
+                const str = String(value);
+                // 如果包含逗号、引号或换行符，需要用引号包裹并转义内部引号
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
+            // CSV 表头
+            const headers = ['日期', '类别', '图标', '金额', '备注', '位置'];
+            let csvContent = headers.join(',') + '\n';
+
+            // 遍历所有缓存数据
+            const allRecords = [];
+            Object.entries(dataCache).forEach(([monthKey, monthCache]) => {
+                const monthData = monthCache.data || {};
+                Object.entries(monthData).forEach(([day, dayData]) => {
+                    const activities = dayData.activities || [];
+                    activities.forEach(activity => {
+                        // 提取日期时间
+                        let dateStr = '';
+                        if (activity.fields?.日期) {
+                            const timestamp = activity.fields.日期;
+                            const date = new Date(timestamp);
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const hour = String(date.getHours()).padStart(2, '0');
+                            const minute = String(date.getMinutes()).padStart(2, '0');
+                            dateStr = `${year}-${month}-${day} ${hour}:${minute}`;
+                        }
+
+                        // 提取位置
+                        let location = '';
+                        if (activity.fields?.位置 && activity.fields.位置.length > 0) {
+                            location = activity.fields.位置[0].text || '';
+                        }
+
+                        allRecords.push({
+                            date: dateStr,
+                            category: activity.title || '',
+                            icon: activity.icon || '',
+                            amount: activity.amount || 0,
+                            description: activity.description || '',
+                            location: location
+                        });
+                    });
+                });
+            });
+
+            // 按日期排序（最新的在前）
+            allRecords.sort((a, b) => {
+                if (!a.date) return 1;
+                if (!b.date) return -1;
+                return new Date(b.date) - new Date(a.date);
+            });
+
+            // 生成 CSV 行
+            allRecords.forEach(record => {
+                const row = [
+                    escapeCSV(record.date),
+                    escapeCSV(record.category),
+                    escapeCSV(record.icon),
+                    escapeCSV(record.amount),
+                    escapeCSV(record.description),
+                    escapeCSV(record.location)
+                ];
+                csvContent += row.join(',') + '\n';
+            });
+
+            // 生成文件名
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const fileName = `活动记录_${timestamp}.csv`;
+            const fileUri = FileSystem.documentDirectory + fileName;
+
+            // 写入文件（使用 UTF-8 BOM 确保 Excel 正确识别编码）
+            const BOM = '\uFEFF';
+            const fullContent = BOM + csvContent;
+
+            // 将字符串转换为 UTF-8 字节数组，然后转为 Base64
+            const utf8Bytes = unescape(encodeURIComponent(fullContent));
+            let base64 = '';
+            for (let i = 0; i < utf8Bytes.length; i++) {
+                base64 += String.fromCharCode(utf8Bytes.charCodeAt(i));
+            }
+            const base64Content = btoa(base64);
+
+            await FileSystem.writeAsStringAsync(fileUri, base64Content, {
+                encoding: FileSystem.EncodingType.Base64
+            });
+
+            console.log(`✅ CSV 文件已生成: ${fileName}`);
+            console.log(`📊 共导出 ${allRecords.length} 条记录`);
+
+            // 分享文件
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(fileUri, {
+                    mimeType: 'text/csv',
+                    dialogTitle: '导出活动记录'
+                });
+                return { success: true, recordCount: allRecords.length };
+            } else {
+                return {
+                    success: false,
+                    error: '当前平台不支持文件分享功能'
+                };
+            }
+        } catch (error) {
+            console.error('导出数据失败:', error);
             return { success: false, error: error.message };
         }
     };
@@ -747,6 +955,7 @@ export const GlobalDataProvider = ({ children }) => {
         getMonthKey,
         clearAllCache,
         findSimilarCategory,
+        exportDataToCSV,
 
         // API 方法
         getTenantAccessToken,
